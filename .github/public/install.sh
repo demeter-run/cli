@@ -10,7 +10,14 @@ main() {
 	version=${1:-latest}
 
 	root_dir="${DMTRCTL_INSTALL:-$HOME/.dmtr}"
-	download_uri="https://github.com/demeter-run/cli/releases/download/${version}/${os}-${arch}.tar.gz"
+
+	if [ "$version" == "latest" ]; then
+		echo "using latest version"
+		download_uri="https://github.com/demeter-run/cli/releases/latest/download/${os}-${arch}.tar.gz"
+	else
+		echo "using version ${version}"
+		download_uri="https://github.com/demeter-run/cli/releases/download/${version}/${os}-${arch}.tar.gz"
+	fi
 
 	echo "downloading binary from ${download_uri}"
 
