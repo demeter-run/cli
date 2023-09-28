@@ -1,64 +1,92 @@
-use std::{os::fd::AsFd, path::Path, sync::Arc, time::Duration};
-use tokio_rustls::TlsConnector;
-use tracing::instrument;
-
 use clap::Parser;
 use miette::{bail, Context, IntoDiagnostic};
-use tokio::io::{self, AsyncRead, AsyncWrite};
-use tracing::{info, warn};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
+use tokio::{
+    io::{AsyncRead, AsyncWrite},
+    net::{TcpStream, UnixStream},
+};
+use tokio_rustls::TlsConnector;
+use tracing::{debug, info, instrument, warn};
 
 #[derive(Parser)]
 pub struct Args {
-    //#[arg(short, long)]
-    //path2: String
-    #[arg(help = "the name of the cardano node instance")]
+    /// the name of the cardano node instance
     instance: String,
+
+    /// local path for the unix socket
+    #[arg(long)]
+    socket: Option<PathBuf>,
+
+    /// override the default remote hostname
+    #[arg(long)]
+    host: Option<String>,
+
+    /// override the default remote port
+    #[arg(long)]
+    port: Option<u16>,
 }
 
-pub async fn proxy<T1, T2>(s1: T1, s2: T2) -> miette::Result<()>
+pub async fn copy_bytes<T1, T2>(s1: T1, s2: T2) -> miette::Result<()>
 where
     T1: AsyncRead + AsyncWrite + Unpin,
     T2: AsyncRead + AsyncWrite + Unpin,
 {
-    let (mut read_1, mut write_1) = io::split(s1);
-    let (mut read_2, mut write_2) = io::split(s2);
+    let (mut read_1, mut write_1) = tokio::io::split(s1);
+    let (mut read_2, mut write_2) = tokio::io::split(s2);
 
     tokio::select! {
-        res=io::copy(&mut read_1, &mut write_2)=>{
+        res=tokio::io::copy(&mut read_1, &mut write_2)=>{
             match res {
-                Ok(read) => println!("read {read} bytes"),
+                Ok(read) => debug!(read, "downstrem EOF"),
                 Err(err) => bail!(err),
             }
         },
-        res=io::copy(&mut read_2, &mut write_1)=>{
+        res=tokio::io::copy(&mut read_2, &mut write_1)=>{
             match res {
-                Ok(read) => println!("read {read} bytes"),
+                Ok(read) => debug!(read, "upstream EOF"),
                 Err(err) => bail!(err),
             }
         }
     }
 
-    println!("closing connection");
+    warn!("connection ended");
 
     Ok(())
 }
 
-#[instrument(skip_all)]
-pub async fn run(args: Args) -> miette::Result<()> {
-    let socket = Path::new("node0.socket");
+const DEFAULT_CLUSTER: &str = "us1.demeter.run";
 
-    // Bind to socket
-    let server = match tokio::net::UnixListener::bind(&socket) {
-        Err(err) => bail!(err),
-        Ok(stream) => stream,
-    };
+fn define_cluster(global: &crate::Cli) -> String {
+    global
+        .cluster
+        .to_owned()
+        .unwrap_or(DEFAULT_CLUSTER.to_owned())
+}
 
-    let (local, client) = server.accept().await.into_diagnostic()?;
+fn define_remote_host(args: &Args, global: &crate::Cli) -> miette::Result<String> {
+    let cluster = define_cluster(global);
 
-    println!("connected");
-    info!(?client, "new client connected to node0");
+    match (&args.host, &global.project) {
+        (Some(explicit), _) => Ok(explicit.to_owned()),
+        (None, Some(prj)) => Ok(format!("cardanonode-{}-n2c-{prj}.{cluster}", args.instance)),
+        (None, None) => bail!("missing both project id and explicit host"),
+    }
+}
 
-    let remote = tokio::net::TcpStream::connect("node-preprod-stable.us1.demeter.run:9443")
+const DEFAULT_REMOTE_PORT: u16 = 9443;
+
+fn define_remote_port(args: &Args) -> u16 {
+    args.port.unwrap_or(DEFAULT_REMOTE_PORT)
+}
+
+async fn connect_remote(
+    host: &str,
+    port: u16,
+) -> miette::Result<tokio_rustls::client::TlsStream<TcpStream>> {
+    let remote = tokio::net::TcpStream::connect(format!("{host}:{port}"))
         .await
         .into_diagnostic()?;
 
@@ -90,7 +118,7 @@ pub async fn run(args: Args) -> miette::Result<()> {
 
     let config = Arc::new(config);
 
-    let domain = rustls::ServerName::try_from("node-preprod-stable.us1.demeter.run")
+    let domain = rustls::ServerName::try_from(host)
         .into_diagnostic()
         .context("invalid DNS name")?;
 
@@ -100,7 +128,71 @@ pub async fn run(args: Args) -> miette::Result<()> {
         .into_diagnostic()
         .context("couldn't connect to TLS server")?;
 
-    proxy(local, remote).await?;
+    Ok(remote)
+}
+
+fn define_socket_path(args: &Args) -> miette::Result<PathBuf> {
+    let path = args
+        .socket
+        .to_owned()
+        .unwrap_or_else(|| Path::new("node0.socket").to_path_buf());
+
+    if path.exists() {
+        bail!("path for the socket already exists");
+    }
+
+    Ok(path)
+}
+
+async fn spawn_new_connection(
+    local: UnixStream,
+    remote_host: &str,
+    remote_port: u16,
+) -> miette::Result<()> {
+    info!("new client connected to socket");
+
+    let remote = connect_remote(&remote_host, remote_port).await?;
+    info!("connected to remote endpoint");
+
+    let connection = copy_bytes(local, remote);
+
+    tokio::spawn(connection);
+    info!("proxy running");
+
+    Ok(())
+}
+
+#[instrument("proxy", skip_all)]
+pub async fn run(args: &Args, global: &crate::Cli) -> miette::Result<()> {
+    let socket = define_socket_path(args).context("error defining unix socket path")?;
+
+    let server = tokio::net::UnixListener::bind(&socket)
+        .into_diagnostic()
+        .context("error creating unix socket listener")?;
+
+    info!(path = ?socket, "created unix socket");
+
+    let host = define_remote_host(args, global)?;
+    let port = define_remote_port(args);
+    info!(host, port, "remote endpoint defined");
+
+    loop {
+        info!("waiting for client connections");
+
+        tokio::select! {
+            result = server.accept() => {
+                let (local, _) = result.into_diagnostic()?;
+                spawn_new_connection(local, &host, port).await?;
+            }
+            _ = tokio::signal::ctrl_c() => {
+                break;
+            }
+        }
+    }
+
+    std::fs::remove_file(socket)
+        .into_diagnostic()
+        .context("error trying to remove unix socket")?;
 
     Ok(())
 }

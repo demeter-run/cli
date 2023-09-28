@@ -14,9 +14,9 @@ pub enum Commands {
     Proxy(proxy::Args),
 }
 
-pub async fn run(args: Args) -> miette::Result<()> {
-    match args.command {
-        Commands::Proxy(args) => proxy::run(args).await,
+pub async fn run(args: &Args, global: &crate::Cli) -> miette::Result<()> {
+    match &args.command {
+        Commands::Proxy(args) => proxy::run(args, global).await,
         _ => Ok(()),
     }
 }
