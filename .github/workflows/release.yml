@@ -55,6 +55,16 @@ jobs:
     runs-on: ${{ matrix.build_on }}
 
     steps:
+      - name: get dependencies [Ubuntu]
+        if: matrix.build_on == 'ubuntu-latest'
+        run: |
+          sudo apt-get install libssl-dev
+
+      - name: get dependencies [MacOS]
+        if: matrix.build_on == 'macOS-latest'
+        run: |
+          brew install openssl@1.1
+
       - name: checkout repository
         uses: actions/checkout@v3
 
