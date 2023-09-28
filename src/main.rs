@@ -16,8 +16,14 @@ struct Cli {
     #[command(subcommand)]
     command: Commands,
 
-    #[arg(short, long)]
-    config: Option<PathBuf>,
+    #[arg(short, long, global = true)]
+    project: Option<String>,
+
+    #[arg(short, long, global = true)]
+    cluster: Option<String>,
+
+    #[arg(short, long, global = true)]
+    root_dir: Option<PathBuf>,
 }
 
 #[derive(Subcommand)]
@@ -39,7 +45,7 @@ async fn main() -> miette::Result<()> {
 
     let cli = Cli::parse();
 
-    match cli.command {
+    match &cli.command {
         Commands::Login => {
             // let ctx = Context::new(config, None, args.static_files)
             //     .into_diagnostic()
@@ -50,7 +56,7 @@ async fn main() -> miette::Result<()> {
         Commands::CardanoNodes(args) => {
             //let ctx = Context::load(cli.config, None, None).into_diagnostic()?;
 
-            cardano_nodes::run(args).await
+            cardano_nodes::run(&args, &cli).await
         }
     }
 }

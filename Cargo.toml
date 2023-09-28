@@ -16,7 +16,7 @@ rustls-native-certs = "0.6.3"
 serde_json = "1.0.106"
 socket2 = "0.5.4"
 thiserror = "1.0.48"
-tokio = { version = "1.32.0", features = ["macros", "rt", "rt-multi-thread"] }
+tokio = { version = "1.32.0", features = ["macros", "rt", "rt-multi-thread", "signal"] }
 tokio-rustls = "0.24.1"
 tracing = "0.1.37"
 tracing-indicatif = "0.3.5"
