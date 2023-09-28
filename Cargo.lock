@@ -247,7 +247,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "dmtr"
+name = "dmtrctl"
 version = "0.1.0"
 dependencies = [
  "clap",

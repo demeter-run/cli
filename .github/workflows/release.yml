@@ -1,0 +1,111 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    continue-on-error: true
+
+    strategy:
+      matrix:
+        include:
+          - release_for: Linux-GNU-x86_64
+            build_on: ubuntu-latest
+            installs_on: linux
+            target: x86_64-unknown-linux-gnu
+            arch: amd64
+            args: "--locked --release"
+            bin: dmtrctl
+            
+          - release_for: Linux-GNU-armv7
+            build_on: ubuntu-latest
+            installs_on: linux
+            target: "armv7-unknown-linux-gnueabihf"
+            arch: arm64
+            args: "--locked --release"
+            bin: dmtrctl
+            
+          - release_for: Windows-x86_64
+            build_on: windows-latest
+            installs_on: win32
+            target: x86_64-pc-windows-msvc
+            arch: amd64
+            args: "--locked --release"
+            bin: dmtrctl.exe
+
+          - release_for: macOS-x86_64
+            build_on: macOS-latest
+            installs_on: darwin
+            target: x86_64-apple-darwin
+            arch: amd64
+            args: "--locked --release"
+            bin: dmtrctl
+          
+          - release_for: macOS-arm64
+            build_on: macOS-latest
+            installs_on: darwin
+            target: aarch64-apple-darwin
+            arch: arm64
+            args: "--locked --release"
+            bin: dmtrctl
+
+    runs-on: ${{ matrix.build_on }}
+
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: build binary
+        uses: houseabsolute/actions-rust-cross@v0
+        with:
+          command: both
+          target: ${{ matrix.target }}
+          args: ${{ matrix.args }}
+          strip: true
+
+      - name: rename binaries
+        run: |
+          mv target/${{ matrix.target }}/release/${{ matrix.bin }} ${{ matrix.installs_on }}-${{ matrix.arch }}-${{ matrix.bin }}
+
+      - name: upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: binary-${{ matrix.release_for }}
+          path: ${{ matrix.installs_on }}-${{ matrix.arch }}-${{ matrix.bin }}
+
+  github_release:
+    needs: [build]
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.16"
+
+      - name: download artifacts
+        id: "download"
+        uses: actions/download-artifact@v3
+
+      - name: set release notes
+        run: |
+          go install github.com/git-chglog/git-chglog/cmd/git-chglog@v0.15.0
+          git-chglog -c .github/chglog/release.yml $(git describe --tags) > RELEASE.md
+
+      - name: create release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: binary-*/*
+          body_path: RELEASE.md
+          draft: true
