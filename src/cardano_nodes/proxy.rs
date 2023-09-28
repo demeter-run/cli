@@ -72,7 +72,7 @@ fn define_remote_host(args: &Args, global: &crate::Cli) -> miette::Result<String
     match (&args.host, &global.project) {
         (Some(explicit), _) => Ok(explicit.to_owned()),
         (None, Some(prj)) => Ok(format!("cardanonode-{}-n2c-{prj}.{cluster}", args.instance)),
-        (None, None) => bail!("missing both project id and explicit host"),
+        (None, None) => bail!("missing project id"),
     }
 }
 
@@ -165,19 +165,19 @@ async fn spawn_new_connection(
 #[instrument("proxy", skip_all)]
 pub async fn run(args: &Args, global: &crate::Cli) -> miette::Result<()> {
     let socket = define_socket_path(args).context("error defining unix socket path")?;
+    debug!(path = ?socket, "socket path defined");
+
+    let host = define_remote_host(args, global).context("defining remote host")?;
+    let port = define_remote_port(args);
+
+    debug!(host, port, "remote endpoint defined");
 
     let server = tokio::net::UnixListener::bind(&socket)
         .into_diagnostic()
         .context("error creating unix socket listener")?;
 
-    info!(path = ?socket, "created unix socket");
-
-    let host = define_remote_host(args, global)?;
-    let port = define_remote_port(args);
-    info!(host, port, "remote endpoint defined");
-
     loop {
-        info!("waiting for client connections");
+        info!(path = ?socket, "waiting for client connections");
 
         tokio::select! {
             result = server.accept() => {
