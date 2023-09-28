@@ -87,7 +87,7 @@ jobs:
 
       - name: tar binaries
         run: |
-          tar -czvf ${{ matrix.installs_on }}-${{ matrix.arch }}.tar.gz -C target/${{ matrix.target }}/release/${{ matrix.bin }} .
+          tar -czvf ${{ matrix.installs_on }}-${{ matrix.arch }}.tar.gz -C target/${{ matrix.target }}/release/ ${{ matrix.bin }}
 
       - name: upload artifacts
         uses: actions/upload-artifact@v3
