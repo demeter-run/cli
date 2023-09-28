@@ -56,9 +56,16 @@ jobs:
 
     steps:
       - name: get dependencies [Ubuntu]
-        if: matrix.build_on == 'ubuntu-latest'
+        if: matrix.release_for == 'Linux-GNU-x86_64'
         run: |
-          sudo apt-get install libssl-dev libssl-dev:armhf
+          sudo apt-get install libssl-dev
+      
+      - name: get dependencies [Ubuntu/ARM]
+        if: matrix.release_for == 'Linux-GNU-armv7'
+        run: |
+          sudo dpkg --add-architecture armhf
+          sudo apt-get update
+          sudo apt-get install libssl-dev:armhf
 
       - name: get dependencies [MacOS]
         if: matrix.build_on == 'macOS-latest'
