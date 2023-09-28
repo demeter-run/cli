@@ -58,7 +58,7 @@ jobs:
       - name: get dependencies [Ubuntu]
         if: matrix.build_on == 'ubuntu-latest'
         run: |
-          sudo apt-get install libssl-dev
+          sudo apt-get install libssl-dev libssl-dev:armhf
 
       - name: get dependencies [MacOS]
         if: matrix.build_on == 'macOS-latest'
@@ -73,7 +73,7 @@ jobs:
       - name: build binary
         uses: houseabsolute/actions-rust-cross@v0
         with:
-          command: both
+          command: build
           target: ${{ matrix.target }}
           args: ${{ matrix.args }}
           strip: true
