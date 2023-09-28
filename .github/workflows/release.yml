@@ -85,15 +85,15 @@ jobs:
           args: ${{ matrix.args }}
           strip: true
 
-      - name: rename binaries
+      - name: tar binaries
         run: |
-          mv target/${{ matrix.target }}/release/${{ matrix.bin }} ${{ matrix.installs_on }}-${{ matrix.arch }}-${{ matrix.bin }}
+          tar -czvf ${{ matrix.installs_on }}-${{ matrix.arch }}.tar.gz -C target/${{ matrix.target }}/release/${{ matrix.bin }} .
 
       - name: upload artifacts
         uses: actions/upload-artifact@v3
         with:
           name: binary-${{ matrix.release_for }}
-          path: ${{ matrix.installs_on }}-${{ matrix.arch }}-${{ matrix.bin }}
+          path: ${{ matrix.installs_on }}-${{ matrix.arch }}.tar.gz
 
   github_release:
     needs: [build]
