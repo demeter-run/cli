@@ -24,6 +24,9 @@ pub struct Cli {
 
     #[arg(short, long, global = true)]
     root_dir: Option<PathBuf>,
+
+    #[arg(short, long, global = true, action)]
+    verbose: bool,
 }
 
 #[derive(Subcommand)]
@@ -34,16 +37,21 @@ pub enum Commands {
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
+    let cli = Cli::parse();
+
     let indicatif_layer = IndicatifLayer::new();
+
+    let level = match cli.verbose {
+        true => Level::DEBUG,
+        false => Level::INFO,
+    };
 
     tracing_subscriber::registry()
         //.with(tracing_subscriber::filter::LevelFilter::INFO)
-        .with(tracing_subscriber::filter::Targets::default().with_target("dmtr", Level::INFO))
+        .with(tracing_subscriber::filter::Targets::default().with_target("dmtr", level))
         .with(tracing_subscriber::fmt::layer().with_writer(indicatif_layer.get_stderr_writer()))
         .with(indicatif_layer)
         .init();
-
-    let cli = Cli::parse();
 
     match &cli.command {
         Commands::Login => {
