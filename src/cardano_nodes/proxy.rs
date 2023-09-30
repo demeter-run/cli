@@ -1,9 +1,6 @@
 use clap::Parser;
 use miette::{bail, Context, IntoDiagnostic};
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::{path::PathBuf, sync::Arc};
 use tokio::{
     io::{AsyncRead, AsyncWrite},
     net::{TcpStream, UnixStream},
@@ -58,14 +55,14 @@ where
 }
 
 fn define_remote_host(args: &Args, ctx: &crate::Context) -> miette::Result<String> {
-    match (&args.host, &ctx.project) {
-        (Some(explicit), _) => Ok(explicit.to_owned()),
-        (None, Some(prj)) => Ok(format!(
-            "cardanonode-{}-n2c-{prj}.{}",
-            args.instance, ctx.cluster
-        )),
-        (None, None) => bail!("missing project id"),
+    if let Some(explicit) = &args.host {
+        return Ok(explicit.to_owned());
     }
+
+    return Ok(format!(
+        "cardanonode-{}-n2c-{}.{}",
+        args.instance, ctx.config.project.name, ctx.config.operator.entrypoint,
+    ));
 }
 
 const DEFAULT_REMOTE_PORT: u16 = 9443;
@@ -125,6 +122,7 @@ async fn connect_remote(
 
 fn define_socket_path(args: &Args, ctx: &crate::Context) -> miette::Result<PathBuf> {
     let default = ctx
+        .dirs
         .ensure_extension_dir("cardano-nodes", "v2")?
         .join(format!("{}.socket", args.instance));
 

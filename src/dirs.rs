@@ -1,7 +1,5 @@
 use miette::IntoDiagnostic;
-use std::path::PathBuf;
-
-use crate::Cli;
+use std::path::{Path, PathBuf};
 
 fn default_root_dir() -> miette::Result<PathBuf> {
     let defined = dirs::home_dir()
@@ -11,23 +9,27 @@ fn default_root_dir() -> miette::Result<PathBuf> {
     Ok(defined)
 }
 
-pub fn ensure_root_dir(explicit: &Option<PathBuf>) -> miette::Result<PathBuf> {
+pub fn ensure_root_dir(explicit: Option<&Path>) -> miette::Result<PathBuf> {
     let default = default_root_dir()?;
 
-    let defined = explicit.to_owned().unwrap_or(default);
+    let defined = explicit.map(|p| p.to_path_buf()).unwrap_or(default);
 
     std::fs::create_dir_all(&defined).into_diagnostic()?;
 
     Ok(defined)
 }
 
-const DEFAULT_CLUSTER: &str = "us1.demeter.run";
-
-fn define_cluster(explicit: &Option<String>) -> String {
-    explicit.to_owned().unwrap_or(DEFAULT_CLUSTER.to_owned())
+pub struct Dirs {
+    root_dir: PathBuf,
 }
 
-impl Context {
+impl Dirs {
+    pub fn try_new(root_dir: Option<&Path>) -> miette::Result<Self> {
+        let root_dir = ensure_root_dir(root_dir)?;
+
+        Ok(Self { root_dir })
+    }
+
     pub fn ensure_extension_dir(
         &self,
         extension_key: &str,
@@ -55,21 +57,4 @@ impl Context {
 
         Ok(defined)
     }
-}
-
-pub struct Context {
-    pub root_dir: PathBuf,
-    pub cluster: String,
-    pub project: Option<String>,
-}
-
-pub fn from_cli(cli: &Cli) -> miette::Result<Context> {
-    let root_dir = ensure_root_dir(&cli.root_dir)?;
-    let cluster = define_cluster(&cli.cluster);
-
-    Ok(Context {
-        root_dir,
-        cluster,
-        project: cli.project.to_owned(),
-    })
 }

@@ -1,5 +1,4 @@
-mod add;
-mod core;
+mod edit;
 
 use clap::Parser;
 
@@ -11,12 +10,12 @@ pub struct Args {
 
 #[derive(Parser)]
 pub enum Commands {
-    Add(add::Args),
+    Edit(edit::Args),
 }
 
 pub async fn run(args: Args, ctx: &crate::Context) -> miette::Result<()> {
     match args.command {
-        Commands::Add(args) => add::run(args, ctx).await,
+        Commands::Edit(args) => edit::run(args, ctx).await,
         _ => Ok(()),
     }
 }
