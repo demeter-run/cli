@@ -13,7 +13,7 @@ use tracing::{debug, info, instrument, warn};
 
 #[derive(Parser)]
 pub struct Args {
-    /// the name of the cardano node instance
+    /// the name of the Cardano node instance
     instance: String,
 
     /// local path for the unix socket
@@ -57,21 +57,13 @@ where
     Ok(())
 }
 
-const DEFAULT_CLUSTER: &str = "us1.demeter.run";
-
-fn define_cluster(global: &crate::Cli) -> String {
-    global
-        .cluster
-        .to_owned()
-        .unwrap_or(DEFAULT_CLUSTER.to_owned())
-}
-
-fn define_remote_host(args: &Args, global: &crate::Cli) -> miette::Result<String> {
-    let cluster = define_cluster(global);
-
-    match (&args.host, &global.project) {
+fn define_remote_host(args: &Args, ctx: &crate::Context) -> miette::Result<String> {
+    match (&args.host, &ctx.project) {
         (Some(explicit), _) => Ok(explicit.to_owned()),
-        (None, Some(prj)) => Ok(format!("cardanonode-{}-n2c-{prj}.{cluster}", args.instance)),
+        (None, Some(prj)) => Ok(format!(
+            "cardanonode-{}-n2c-{prj}.{}",
+            args.instance, ctx.cluster
+        )),
         (None, None) => bail!("missing project id"),
     }
 }
@@ -131,11 +123,12 @@ async fn connect_remote(
     Ok(remote)
 }
 
-fn define_socket_path(args: &Args) -> miette::Result<PathBuf> {
-    let path = args
-        .socket
-        .to_owned()
-        .unwrap_or_else(|| Path::new("node0.socket").to_path_buf());
+fn define_socket_path(args: &Args, ctx: &crate::Context) -> miette::Result<PathBuf> {
+    let default = ctx
+        .ensure_ext_dir("cardano-nodes", "v2")?
+        .join(format!("{}.socket", args.instance));
+
+    let path = args.socket.to_owned().unwrap_or(default);
 
     if path.exists() {
         bail!("path for the socket already exists");
@@ -154,20 +147,20 @@ async fn spawn_new_connection(
     let remote = connect_remote(&remote_host, remote_port).await?;
     info!("connected to remote endpoint");
 
-    let connection = copy_bytes(local, remote);
+    let copy_op = copy_bytes(local, remote);
 
-    tokio::spawn(connection);
+    tokio::spawn(copy_op);
     info!("proxy running");
 
     Ok(())
 }
 
 #[instrument("proxy", skip_all)]
-pub async fn run(args: &Args, global: &crate::Cli) -> miette::Result<()> {
-    let socket = define_socket_path(args).context("error defining unix socket path")?;
+pub async fn run(args: &Args, ctx: &crate::Context) -> miette::Result<()> {
+    let socket = define_socket_path(args, ctx).context("error defining unix socket path")?;
     debug!(path = ?socket, "socket path defined");
 
-    let host = define_remote_host(args, global).context("defining remote host")?;
+    let host = define_remote_host(args, ctx).context("defining remote host")?;
     let port = define_remote_port(args);
 
     debug!(host, port, "remote endpoint defined");
