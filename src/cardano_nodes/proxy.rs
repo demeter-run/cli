@@ -1,9 +1,6 @@
 use clap::Parser;
 use miette::{bail, Context, IntoDiagnostic};
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::{path::PathBuf, sync::Arc};
 use tokio::{
     io::{AsyncRead, AsyncWrite},
     net::{TcpStream, UnixStream},
@@ -58,14 +55,14 @@ where
 }
 
 fn define_remote_host(args: &Args, ctx: &crate::Context) -> miette::Result<String> {
-    match (&args.host, &ctx.project) {
-        (Some(explicit), _) => Ok(explicit.to_owned()),
-        (None, Some(prj)) => Ok(format!(
-            "cardanonode-{}-n2c-{prj}.{}",
-            args.instance, ctx.cluster
-        )),
-        (None, None) => bail!("missing project id"),
+    if let Some(explicit) = &args.host {
+        return Ok(explicit.to_owned());
     }
+
+    return Ok(format!(
+        "cardanonode-{}-n2c-{}.{}",
+        args.instance, ctx.config.project.name, ctx.config.operator.entrypoint,
+    ));
 }
 
 const DEFAULT_REMOTE_PORT: u16 = 9443;
@@ -125,7 +122,8 @@ async fn connect_remote(
 
 fn define_socket_path(args: &Args, ctx: &crate::Context) -> miette::Result<PathBuf> {
     let default = ctx
-        .ensure_ext_dir("cardano-nodes", "v2")?
+        .dirs
+        .ensure_extension_dir("cardano-nodes", "v2")?
         .join(format!("{}.socket", args.instance));
 
     let path = args.socket.to_owned().unwrap_or(default);
@@ -156,12 +154,12 @@ async fn spawn_new_connection(
 }
 
 #[instrument("proxy", skip_all)]
-pub async fn run(args: &Args, ctx: &crate::Context) -> miette::Result<()> {
-    let socket = define_socket_path(args, ctx).context("error defining unix socket path")?;
+pub async fn run(args: Args, ctx: &crate::Context) -> miette::Result<()> {
+    let socket = define_socket_path(&args, ctx).context("error defining unix socket path")?;
     debug!(path = ?socket, "socket path defined");
 
-    let host = define_remote_host(args, ctx).context("defining remote host")?;
-    let port = define_remote_port(args);
+    let host = define_remote_host(&args, ctx).context("defining remote host")?;
+    let port = define_remote_port(&args);
 
     debug!(host, port, "remote endpoint defined");
 
