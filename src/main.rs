@@ -5,9 +5,10 @@ use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::prelude::*;
 
 mod cardano_nodes;
+mod context;
 mod login;
 
-pub struct Context {}
+pub use context::*;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -53,6 +54,8 @@ async fn main() -> miette::Result<()> {
         .with(indicatif_layer)
         .init();
 
+    let ctx = context::from_cli(&cli)?;
+
     match &cli.command {
         Commands::Login => {
             // let ctx = Context::new(config, None, args.static_files)
@@ -64,7 +67,7 @@ async fn main() -> miette::Result<()> {
         Commands::CardanoNodes(args) => {
             //let ctx = Context::load(cli.config, None, None).into_diagnostic()?;
 
-            cardano_nodes::run(&args, &cli).await
+            cardano_nodes::run(&args, &ctx).await
         }
     }
 }
