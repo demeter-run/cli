@@ -7,6 +7,7 @@ use tracing_subscriber::prelude::*;
 mod cardano_nodes;
 mod context;
 mod login;
+pub mod projects;
 
 pub use context::*;
 
@@ -33,6 +34,7 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Commands {
     Login,
+    Projects(projects::Args),
     CardanoNodes(cardano_nodes::Args),
 }
 
@@ -56,18 +58,9 @@ async fn main() -> miette::Result<()> {
 
     let ctx = context::from_cli(&cli)?;
 
-    match &cli.command {
-        Commands::Login => {
-            // let ctx = Context::new(config, None, args.static_files)
-            //     .into_diagnostic()
-            //     .wrap_err("loading context failed")?;
-
-            login::run().await
-        }
-        Commands::CardanoNodes(args) => {
-            //let ctx = Context::load(cli.config, None, None).into_diagnostic()?;
-
-            cardano_nodes::run(&args, &ctx).await
-        }
+    match cli.command {
+        Commands::Login => login::run().await,
+        Commands::Projects(args) => projects::run(args, &ctx).await,
+        Commands::CardanoNodes(args) => cardano_nodes::run(args, &ctx).await,
     }
 }

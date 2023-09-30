@@ -28,12 +28,29 @@ fn define_cluster(explicit: &Option<String>) -> String {
 }
 
 impl Context {
-    pub fn ensure_ext_dir(
+    pub fn ensure_extension_dir(
         &self,
         extension_key: &str,
         version_key: &str,
     ) -> miette::Result<PathBuf> {
-        let defined = self.root_dir.join(extension_key).join(version_key);
+        let defined = self
+            .root_dir
+            .join("ext")
+            .join(extension_key)
+            .join(version_key);
+
+        std::fs::create_dir_all(&defined).into_diagnostic()?;
+
+        Ok(defined)
+    }
+
+    pub fn ensure_project_dir(
+        &self,
+        cloud_key: &str,
+        project_key: &str,
+    ) -> miette::Result<PathBuf> {
+        let defined = self.root_dir.join("prj").join(cloud_key).join(project_key);
+
         std::fs::create_dir_all(&defined).into_diagnostic()?;
 
         Ok(defined)

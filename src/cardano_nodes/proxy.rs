@@ -125,7 +125,7 @@ async fn connect_remote(
 
 fn define_socket_path(args: &Args, ctx: &crate::Context) -> miette::Result<PathBuf> {
     let default = ctx
-        .ensure_ext_dir("cardano-nodes", "v2")?
+        .ensure_extension_dir("cardano-nodes", "v2")?
         .join(format!("{}.socket", args.instance));
 
     let path = args.socket.to_owned().unwrap_or(default);
@@ -156,12 +156,12 @@ async fn spawn_new_connection(
 }
 
 #[instrument("proxy", skip_all)]
-pub async fn run(args: &Args, ctx: &crate::Context) -> miette::Result<()> {
-    let socket = define_socket_path(args, ctx).context("error defining unix socket path")?;
+pub async fn run(args: Args, ctx: &crate::Context) -> miette::Result<()> {
+    let socket = define_socket_path(&args, ctx).context("error defining unix socket path")?;
     debug!(path = ?socket, "socket path defined");
 
-    let host = define_remote_host(args, ctx).context("defining remote host")?;
-    let port = define_remote_port(args);
+    let host = define_remote_host(&args, ctx).context("defining remote host")?;
+    let port = define_remote_port(&args);
 
     debug!(host, port, "remote endpoint defined");
 
