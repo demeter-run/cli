@@ -8,7 +8,6 @@ mod cardano_nodes;
 mod config;
 mod core;
 mod dirs;
-mod login;
 
 const DEFAULT_CLOUD: &str = "cloud0.txpipe.io";
 
@@ -42,7 +41,6 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    Login,
     Config(config::Args),
     CardanoNodes(cardano_nodes::Args),
 }
@@ -89,7 +87,6 @@ async fn main() -> miette::Result<()> {
     let ctx = Context::for_cli(&cli)?;
 
     match cli.command {
-        Commands::Login => login::run().await,
         Commands::Config(args) => config::run(args, &ctx).await,
         Commands::CardanoNodes(args) => cardano_nodes::run(args, &ctx).await,
     }
