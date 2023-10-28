@@ -54,14 +54,14 @@ where
     Ok(())
 }
 
-fn define_remote_host(args: &Args, ctx: &crate::Context) -> miette::Result<String> {
+fn define_remote_host(args: &Args, ctx: &crate::core::Context) -> miette::Result<String> {
     if let Some(explicit) = &args.host {
         return Ok(explicit.to_owned());
     }
 
     return Ok(format!(
         "cardanonode-{}-n2c-{}.{}",
-        args.instance, ctx.config.project.name, ctx.config.operator.entrypoint,
+        args.instance, ctx.project.name, ctx.operator.entrypoint,
     ));
 }
 
@@ -120,10 +120,13 @@ async fn connect_remote(
     Ok(remote)
 }
 
-fn define_socket_path(args: &Args, ctx: &crate::Context) -> miette::Result<PathBuf> {
-    let default = ctx
-        .dirs
-        .ensure_extension_dir("cardano-nodes", "v2")?
+fn define_socket_path(
+    args: &Args,
+    dirs: &crate::dirs::Dirs,
+    ctx: &crate::core::Context,
+) -> miette::Result<PathBuf> {
+    let default = dirs
+        .ensure_tmp_dir(&ctx.project.name)?
         .join(format!("{}.socket", args.instance));
 
     let path = args.socket.to_owned().unwrap_or(default);
@@ -153,9 +156,15 @@ async fn spawn_new_connection(
     Ok(())
 }
 
-#[instrument("proxy", skip_all)]
-pub async fn run(args: Args, ctx: &crate::Context) -> miette::Result<()> {
-    let socket = define_socket_path(&args, ctx).context("error defining unix socket path")?;
+#[instrument("connect", skip_all)]
+pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
+    let ctx = cli
+        .context
+        .as_ref()
+        .ok_or(miette::miette!("missing context"))?;
+
+    let socket =
+        define_socket_path(&args, &cli.dirs, ctx).context("error defining unix socket path")?;
     debug!(path = ?socket, "socket path defined");
 
     let host = define_remote_host(&args, ctx).context("defining remote host")?;

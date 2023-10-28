@@ -30,28 +30,12 @@ impl Dirs {
         Ok(Self { root_dir })
     }
 
-    pub fn ensure_extension_dir(
-        &self,
-        extension_key: &str,
-        version_key: &str,
-    ) -> miette::Result<PathBuf> {
-        let defined = self
-            .root_dir
-            .join("ext")
-            .join(extension_key)
-            .join(version_key);
-
-        std::fs::create_dir_all(&defined).into_diagnostic()?;
-
-        Ok(defined)
+    pub fn root_dir(&self) -> &Path {
+        &self.root_dir
     }
 
-    pub fn ensure_project_dir(
-        &self,
-        cloud_key: &str,
-        project_key: &str,
-    ) -> miette::Result<PathBuf> {
-        let defined = self.root_dir.join("prj").join(cloud_key).join(project_key);
+    pub fn ensure_tmp_dir(&self, namespace: &str) -> miette::Result<PathBuf> {
+        let defined = self.root_dir.join("tmp").join(namespace);
 
         std::fs::create_dir_all(&defined).into_diagnostic()?;
 
