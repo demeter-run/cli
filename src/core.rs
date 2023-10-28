@@ -1,14 +1,20 @@
-use std::path::{Path, PathBuf};
+use std::collections::HashMap;
 
-use miette::{Context, IntoDiagnostic};
+use miette::{Context as MietteContext, IntoDiagnostic};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct Config {
+    pub contexts: HashMap<String, Context>,
+    pub default_context: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Context {
     pub project: Project,
     pub cloud: Cloud,
     pub operator: Operator,
-    pub auth: Option<Auth>,
+    pub auth: Auth,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -34,84 +40,74 @@ pub struct Operator {
     pub entrypoint: String,
 }
 
-pub fn define_config_location(
-    project_key: &str,
-    cloud_key: &str,
-    dirs: &crate::dirs::Dirs,
-) -> miette::Result<PathBuf> {
-    let defined = dirs
-        .ensure_project_dir(cloud_key, project_key)?
-        .join("dmtrctl.toml");
+fn load_config(dirs: &crate::dirs::Dirs) -> miette::Result<Config> {
+    let location = dirs.root_dir().join("config.toml");
 
-    Ok(defined)
-}
+    if !location.exists() {
+        return Ok(Config::default());
+    }
 
-fn load_config_file(location: &Path) -> miette::Result<Config> {
     let toml = std::fs::read_to_string(location)
         .into_diagnostic()
         .context("reading project config file")?;
 
     let dto = toml::from_str(&toml)
         .into_diagnostic()
-        .context("serializing project config")?;
+        .context("serializing config")?;
 
     Ok(dto)
 }
 
-fn infer_auth(apikey: &str) -> Auth {
-    crate::core::Auth {
-        name: "root".to_owned(),
-        method: "ApiKey".to_owned(),
-        token: apikey.to_owned(),
-    }
-}
+fn save_config(value: Config, dirs: &crate::dirs::Dirs) -> miette::Result<()> {
+    let location = dirs.root_dir().join("config.toml");
 
-fn infer_config(project: &str, cloud: &str, apikey: Option<&str>) -> Config {
-    crate::core::Config {
-        project: Project {
-            name: project.to_owned(),
-        },
-        auth: apikey.map(infer_auth),
-        cloud: Cloud {
-            name: cloud.to_owned(),
-        },
-        operator: Operator {
-            name: "TxPipe".to_owned(),
-            entrypoint: "us1.demeter.run".to_owned(),
-        },
-    }
-}
-
-pub fn load_or_infer_config(
-    project: &str,
-    cloud: &str,
-    apikey: Option<&str>,
-    dirs: &crate::dirs::Dirs,
-) -> miette::Result<Config> {
-    let location = define_config_location(&project, &cloud, dirs)?;
-
-    if location.is_file() {
-        load_config_file(&location)
-    } else {
-        Ok(infer_config(project, cloud, apikey))
-    }
-}
-
-pub fn overwrite_current_config(
-    project: &str,
-    cloud: &str,
-    dto: Config,
-    dirs: &crate::dirs::Dirs,
-) -> miette::Result<()> {
-    let location = define_config_location(project, cloud, dirs)?;
-
-    let toml = toml::to_string(&dto)
+    let toml = toml::to_string(&value)
         .into_diagnostic()
-        .context("serializing project config")?;
+        .context("serializing config")?;
 
     std::fs::write(location, toml)
         .into_diagnostic()
-        .context("writing project config file")?;
+        .context("writing config file")?;
+
+    Ok(())
+}
+
+pub fn load_context(
+    name: Option<&str>,
+    dirs: &crate::dirs::Dirs,
+) -> miette::Result<Option<Context>> {
+    let mut config = load_config(dirs)?;
+
+    if let Some(name) = name {
+        let out = config.contexts.remove(name);
+
+        return Ok(out);
+    }
+
+    if let Some(name) = config.default_context {
+        let out = config.contexts.remove(&name);
+
+        return Ok(out);
+    }
+
+    Ok(None)
+}
+
+pub fn overwrite_context(
+    name: &str,
+    dto: Context,
+    set_default: bool,
+    dirs: &crate::dirs::Dirs,
+) -> miette::Result<()> {
+    let mut config = load_config(dirs)?;
+
+    config.contexts.insert(name.to_string(), dto);
+
+    if set_default {
+        config.default_context = Some(name.to_string());
+    }
+
+    save_config(config, dirs)?;
 
     Ok(())
 }

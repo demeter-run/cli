@@ -4,31 +4,23 @@ use tracing::Level;
 use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::prelude::*;
 
-mod cardano_nodes;
-mod config;
 mod core;
 mod dirs;
+mod init;
 
-const DEFAULT_CLOUD: &str = "cloud0.txpipe.io";
+// namespaces
+mod cardano;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 #[command(propagate_version = true)]
-pub struct Cli {
+pub struct Args {
     #[command(subcommand)]
     command: Commands,
 
-    /// Name of the project we're working with
-    #[arg(short, long, global = true, env = "DMTR_PROJECT")]
-    project: Option<String>,
-
-    /// Name of the cloud we're connecting to
-    #[arg(short, long, global = true, env = "DMTR_CLOUD", default_value = DEFAULT_CLOUD)]
-    cloud: String,
-
-    /// API Key to use for authentication with cloud
-    #[arg(short, long, global = true, env = "DMTR_API_KEY")]
-    api_key: Option<String>,
+    /// Name of the context we're working on
+    #[arg(short, long, global = true, env = "DMTR_CONTEXT")]
+    context: Option<String>,
 
     /// The root location for dmtrctl files
     #[arg(short, long, global = true, env = "DMTR_ROOT_DIR")]
@@ -41,38 +33,26 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    Config(config::Args),
-    CardanoNodes(cardano_nodes::Args),
+    Init(init::Args),
+    Cardano(cardano::Args),
 }
 
-pub struct Context {
-    pub config: core::Config,
+pub struct Cli {
     pub dirs: dirs::Dirs,
-}
-
-impl Context {
-    fn for_cli(cli: &Cli) -> miette::Result<Self> {
-        let dirs = dirs::Dirs::try_new(cli.root_dir.as_deref())?;
-
-        let project = cli
-            .project
-            .as_deref()
-            .ok_or(miette::miette!("missing project id"))?;
-
-        let config =
-            core::load_or_infer_config(&project, &cli.cloud, cli.api_key.as_deref(), &dirs)?;
-
-        Ok(Context { config, dirs })
-    }
+    pub context: Option<core::Context>,
 }
 
 #[tokio::main]
 async fn main() -> miette::Result<()> {
-    let cli = Cli::parse();
+    let args = Args::parse();
+    let dirs = dirs::Dirs::try_new(args.root_dir.as_deref())?;
+    let context = core::load_context(args.context.as_deref(), &dirs)?;
+
+    let cli = Cli { context, dirs };
 
     let indicatif_layer = IndicatifLayer::new();
 
-    let level = match cli.verbose {
+    let level = match args.verbose {
         true => Level::DEBUG,
         false => Level::INFO,
     };
@@ -84,10 +64,8 @@ async fn main() -> miette::Result<()> {
         .with(indicatif_layer)
         .init();
 
-    let ctx = Context::for_cli(&cli)?;
-
-    match cli.command {
-        Commands::Config(args) => config::run(args, &ctx).await,
-        Commands::CardanoNodes(args) => cardano_nodes::run(args, &ctx).await,
+    match args.command {
+        Commands::Init(args) => init::run(args, &cli.dirs).await,
+        Commands::Cardano(args) => cardano::run(args, &cli).await,
     }
 }
