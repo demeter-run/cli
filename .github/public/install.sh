@@ -16,7 +16,7 @@ main() {
 		download_uri="https://github.com/demeter-run/cli/releases/latest/download/dmtrctl-${os}-${arch}.tar.gz"
 	else
 		echo "using version ${version}"
-		download_uri="https://github.com/demeter-run/cli/releases/download/dmtrctl-${version}/${os}-${arch}.tar.gz"
+		download_uri="https://github.com/demeter-run/cli/releases/download/${version}/dmtrctl-${os}-${arch}.tar.gz"
 	fi
 
 	echo "downloading binary from ${download_uri}"
