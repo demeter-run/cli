@@ -1,8 +1,6 @@
 use clap::Parser;
 use miette::IntoDiagnostic;
 
-const DEFAULT_CLOUD: &str = "cloud0.txpipe.io";
-
 #[derive(Parser)]
 pub struct Args {
     // /// specify advance values during init
@@ -11,7 +9,7 @@ pub struct Args {
 }
 
 pub async fn run(_args: Args, dirs: &crate::dirs::Dirs) -> miette::Result<()> {
-    let project_id = inquire::Text::new("Project ID")
+    let namespace = inquire::Text::new("Namespace (aka: project id)")
         .with_placeholder("eg: romantic-calmness-b55bqg")
         .with_help_message("you can find this value on the web console")
         .prompt()
@@ -24,8 +22,7 @@ pub async fn run(_args: Args, dirs: &crate::dirs::Dirs) -> miette::Result<()> {
             "you can find this value on the web console (eg: dmtr_apikey_xxxxxxxxxxxxx)",
         )
         .prompt()
-        .into_diagnostic()?
-        .into();
+        .into_diagnostic()?;
 
     let is_default = inquire::Confirm::new("use as default context?")
         .with_help_message(
@@ -34,31 +31,9 @@ pub async fn run(_args: Args, dirs: &crate::dirs::Dirs) -> miette::Result<()> {
         .prompt()
         .into_diagnostic()?;
 
-    let project = crate::core::Project { name: project_id };
+    let dto = crate::core::Context::ephemeral(&namespace, &api_key);
 
-    let auth = crate::core::Auth {
-        name: "root".to_owned(),
-        method: "ApiKey".to_owned(),
-        token: api_key,
-    };
-
-    let cloud = crate::core::Cloud {
-        name: DEFAULT_CLOUD.to_string(),
-    };
-
-    let operator = crate::core::Operator {
-        name: "TxPipe".to_owned(),
-        entrypoint: "us1.demeter.run".to_owned(),
-    };
-
-    let dto = crate::core::Context {
-        project,
-        auth,
-        cloud,
-        operator,
-    };
-
-    let name = dto.project.name.clone();
+    let name = dto.namespace.name.clone();
 
     crate::core::overwrite_context(&name, dto, is_default, &dirs)?;
 

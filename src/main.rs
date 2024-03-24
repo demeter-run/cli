@@ -7,9 +7,10 @@ use tracing_subscriber::prelude::*;
 mod core;
 mod dirs;
 mod init;
+mod ops;
 
 // namespaces
-mod cardano;
+mod r#use;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -17,6 +18,14 @@ mod cardano;
 pub struct Args {
     #[command(subcommand)]
     command: Commands,
+
+    /// Name of the namespace we're working on
+    #[arg(short, long, global = true, env = "DMTR_NAMESPACE")]
+    namespace: Option<String>,
+
+    /// The api key to use as authentication
+    #[arg(short, long, global = true, env = "DMTR_API_KEY")]
+    api_key: Option<String>,
 
     /// Name of the context we're working on
     #[arg(short, long, global = true, env = "DMTR_CONTEXT")]
@@ -33,8 +42,8 @@ pub struct Args {
 
 #[derive(Subcommand)]
 pub enum Commands {
+    /// initialize your Demeter project
     Init(init::Args),
-    Cardano(cardano::Args),
 }
 
 pub struct Cli {
@@ -46,7 +55,13 @@ pub struct Cli {
 async fn main() -> miette::Result<()> {
     let args = Args::parse();
     let dirs = dirs::Dirs::try_new(args.root_dir.as_deref())?;
-    let context = core::load_context(args.context.as_deref(), &dirs)?;
+
+    let context = core::infer_context(
+        args.context.as_deref(),
+        args.namespace.as_deref(),
+        args.api_key.as_deref(),
+        &dirs,
+    )?;
 
     let cli = Cli { context, dirs };
 
@@ -66,6 +81,5 @@ async fn main() -> miette::Result<()> {
 
     match args.command {
         Commands::Init(args) => init::run(args, &cli.dirs).await,
-        Commands::Cardano(args) => cardano::run(args, &cli).await,
     }
 }
