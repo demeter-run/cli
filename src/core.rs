@@ -11,15 +11,39 @@ pub struct Config {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Context {
-    pub project: Project,
+    pub namespace: Namespace,
     pub cloud: Cloud,
     pub operator: Operator,
     pub auth: Auth,
 }
 
+impl Context {
+    pub fn ephemeral(namespace: &str, api_key: &str) -> Self {
+        let namespace = crate::core::Namespace::new(namespace);
+        let auth = crate::core::Auth::api_key(api_key);
+        let cloud = crate::core::Cloud::default();
+        let operator = crate::core::Operator::default();
+
+        Self {
+            namespace,
+            auth,
+            cloud,
+            operator,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone)]
-pub struct Project {
+pub struct Namespace {
     pub name: String,
+}
+
+impl Namespace {
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.to_owned(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -29,15 +53,44 @@ pub struct Auth {
     pub token: String,
 }
 
+impl Auth {
+    pub fn api_key(token: &str) -> Self {
+        Self {
+            name: "default".to_owned(),
+            method: "ApiKey".to_owned(),
+            token: token.to_owned(),
+        }
+    }
+}
+
+const DEFAULT_CLOUD: &str = "cloud0.txpipe.io";
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Cloud {
     pub name: String,
+}
+
+impl Default for Cloud {
+    fn default() -> Self {
+        Self {
+            name: DEFAULT_CLOUD.to_string(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Operator {
     pub name: String,
     pub entrypoint: String,
+}
+
+impl Default for Operator {
+    fn default() -> Self {
+        Self {
+            name: "TxPipe".to_owned(),
+            entrypoint: "us1.demeter.run".to_owned(),
+        }
+    }
 }
 
 fn load_config(dirs: &crate::dirs::Dirs) -> miette::Result<Config> {
@@ -72,27 +125,6 @@ fn save_config(value: Config, dirs: &crate::dirs::Dirs) -> miette::Result<()> {
     Ok(())
 }
 
-pub fn load_context(
-    name: Option<&str>,
-    dirs: &crate::dirs::Dirs,
-) -> miette::Result<Option<Context>> {
-    let mut config = load_config(dirs)?;
-
-    if let Some(name) = name {
-        let out = config.contexts.remove(name);
-
-        return Ok(out);
-    }
-
-    if let Some(name) = config.default_context {
-        let out = config.contexts.remove(&name);
-
-        return Ok(out);
-    }
-
-    Ok(None)
-}
-
 pub fn overwrite_context(
     name: &str,
     dto: Context,
@@ -110,4 +142,42 @@ pub fn overwrite_context(
     save_config(config, dirs)?;
 
     Ok(())
+}
+
+pub fn load_context_by_name(
+    name: &str,
+    dirs: &crate::dirs::Dirs,
+) -> miette::Result<Option<Context>> {
+    let mut config = load_config(dirs)?;
+    let out = config.contexts.remove(name);
+    return Ok(out);
+}
+
+pub fn load_default_context(dirs: &crate::dirs::Dirs) -> miette::Result<Option<Context>> {
+    let mut config = load_config(dirs)?;
+
+    if let Some(name) = config.default_context {
+        let out = config.contexts.remove(&name);
+
+        return Ok(out);
+    }
+
+    Ok(None)
+}
+pub fn infer_context(
+    name: Option<&str>,
+    namespace: Option<&str>,
+    api_key: Option<&str>,
+    dirs: &crate::dirs::Dirs,
+) -> miette::Result<Option<Context>> {
+    match (name, namespace, api_key) {
+        (None, Some(ns), Some(ak)) => Ok(Some(Context::ephemeral(ns, ak))),
+        (None, None, None) => load_default_context(dirs),
+        (Some(context), None, None) => load_context_by_name(context, dirs),
+        (None, None, Some(_)) => Err(miette::miette!("missing namespace value")),
+        (None, Some(_), None) => Err(miette::miette!("missing api key value")),
+        (..) => Err(miette::miette!(
+            "conflicting values, specify either a context or namespace"
+        )),
+    }
 }
