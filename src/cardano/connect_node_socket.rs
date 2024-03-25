@@ -61,7 +61,7 @@ fn define_remote_host(args: &Args, ctx: &crate::core::Context) -> miette::Result
 
     return Ok(format!(
         "cardanonode-{}-n2c-{}.{}",
-        args.instance, ctx.project.name, ctx.operator.entrypoint,
+        args.instance, ctx.namespace.name, ctx.operator.entrypoint,
     ));
 }
 
@@ -126,7 +126,7 @@ fn define_socket_path(
     ctx: &crate::core::Context,
 ) -> miette::Result<PathBuf> {
     let default = dirs
-        .ensure_tmp_dir(&ctx.project.name)?
+        .ensure_tmp_dir(&ctx.namespace.name)?
         .join(format!("{}.socket", args.instance));
 
     let path = args.socket.to_owned().unwrap_or(default);
