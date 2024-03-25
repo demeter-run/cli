@@ -7,7 +7,7 @@ use tracing_subscriber::prelude::*;
 mod core;
 mod dirs;
 mod init;
-mod ops;
+mod pages;
 
 // namespaces
 mod r#use;
@@ -44,6 +44,9 @@ pub struct Args {
 pub enum Commands {
     /// initialize your Demeter project
     Init(init::Args),
+
+    /// interact with Demeter Pages
+    Pages(pages::Args),
 }
 
 pub struct Cli {
@@ -81,5 +84,6 @@ async fn main() -> miette::Result<()> {
 
     match args.command {
         Commands::Init(args) => init::run(args, &cli.dirs).await,
+        Commands::Pages(args) => pages::run(args, &cli).await,
     }
 }

@@ -6,11 +6,13 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+base64 = "0.22.0"
 clap = { version = "4.4.2", features = ["derive", "env"] }
 dirs = "5.0.1"
 inquire = "0.6.2"
 json = "0.12.4"
 miette = { version = "5.10.0", features = ["fancy"] }
+ocipkg = "0.2.8"
 reqwest = { version = "0.11.20", features = ["blocking", "json"] }
 rustls = "0.21.7"
 rustls-native-certs = "0.6.3"
