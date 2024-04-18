@@ -207,6 +207,6 @@ pub fn build_agent_header() -> String {
 }
 
 fn get_base_url() -> String {
-    let api_base_url = "http://localhost:3000".into();
+    let api_base_url = "https://console.us1.demeter.run".into();
     env::var("API_BASE_URL").unwrap_or(api_base_url)
 }
