@@ -82,7 +82,7 @@ pub async fn get_public<T>(path: &str) -> Result<T, Error>
 where
     T: for<'de> Deserialize<'de>,
 {
-    let url = format!("{}/{}", get_base_url(), path);
+    let url = format!("{}/mgmt/{}", get_base_url(), path);
 
     let client = Client::new();
 
