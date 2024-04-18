@@ -4,11 +4,12 @@ use tracing::Level;
 use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::prelude::*;
 
-mod cardano;
+mod api;
 mod core;
 mod dirs;
 mod init;
 mod pages;
+mod ports;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -46,8 +47,8 @@ pub enum Commands {
     /// interact with Demeter Pages
     Pages(pages::Args),
 
-    /// Cardano-specific commands
-    Cardano(cardano::Args),
+    /// Ports-specific commands
+    Ports(ports::Args),
 }
 
 pub struct Cli {
@@ -86,6 +87,6 @@ async fn main() -> miette::Result<()> {
     match args.command {
         Commands::Init(args) => init::run(args, &cli.dirs).await,
         Commands::Pages(args) => pages::run(args, &cli).await,
-        Commands::Cardano(args) => cardano::run(args, &cli).await,
+        Commands::Ports(args) => ports::run(args, &cli).await,
     }
 }
