@@ -8,6 +8,8 @@ edition = "2021"
 [dependencies]
 base64 = "0.22.0"
 clap = { version = "4.4.2", features = ["derive", "env"] }
+colored = "2.1.0"
+comfy-table = "7.1.1"
 dirs = "5.0.1"
 inquire = "0.6.2"
 json = "0.12.4"
@@ -16,9 +18,11 @@ ocipkg = "0.2.8"
 reqwest = { version = "0.11.20", features = ["blocking", "json"] }
 rustls = "0.21.7"
 rustls-native-certs = "0.6.3"
+semver = "1.0.22"
 serde = { version = "1.0.188", features = ["derive"] }
 serde_json = "1.0.106"
 socket2 = "0.5.4"
+spinners = "4.1.1"
 thiserror = "1.0.48"
 tokio = { version = "1.32.0", features = ["macros", "rt", "rt-multi-thread", "signal"] }
 tokio-rustls = "0.24.1"
