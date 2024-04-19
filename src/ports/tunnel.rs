@@ -10,7 +10,11 @@ use tokio_rustls::TlsConnector;
 use tracing::{debug, info, warn};
 
 #[derive(Parser)]
-pub struct Args {}
+pub struct Args {
+    /// local path for the unix socket
+    #[arg(long)]
+    socket: Option<PathBuf>,
+}
 
 pub async fn copy_bytes<T1, T2>(s1: T1, s2: T2) -> miette::Result<()>
 where
@@ -110,6 +114,18 @@ fn define_socket_path(
     Ok(path)
 }
 
+fn define_default_socket_path(
+    port: &PortInfo,
+    dirs: &crate::dirs::Dirs,
+    ctx: &crate::core::Context,
+) -> miette::Result<String> {
+    let default = dirs
+        .ensure_tmp_dir(&ctx.namespace.name)?
+        .join(format!("{}-{}.socket", port.network, port.version));
+
+    Ok(default.to_string_lossy().to_string())
+}
+
 async fn spawn_new_connection(
     local: UnixStream,
     remote_host: &str,
@@ -129,7 +145,7 @@ async fn spawn_new_connection(
 }
 
 // #[instrument("connect", skip_all)]
-pub async fn run(cli: &crate::Cli) -> miette::Result<()> {
+pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
     let ctx = cli
         .context
         .as_ref()
@@ -201,28 +217,37 @@ pub async fn run(cli: &crate::Cli) -> miette::Result<()> {
         }
     }
 
-    let default_socket_path = define_socket_path(&port_info, None, &cli.dirs, ctx)
-        .context("error defining unix socket path")?;
+    let socket_path: PathBuf;
+    // check if the socket path is provided
+    if args.socket.is_some() {
+        socket_path = define_socket_path(&port_info, args.socket, &cli.dirs, ctx)
+            .context("error defining unix socket path")?;
+    } else {
+        // define the default socket path
+        let default_socket_path = define_default_socket_path(&port_info, &cli.dirs, ctx)
+            .context("error defining unix socket path")?;
 
-    let socket_path_input = inquire::Text::new("Enter the socket path")
-        .with_help_message("The path to the unix socket")
-        .with_default(&default_socket_path.to_string_lossy().to_string())
-        .prompt()
-        .into_diagnostic()?;
+        let socket_path_input = inquire::Text::new("Enter the socket path")
+            .with_help_message("The path to the unix socket")
+            .with_default(&default_socket_path)
+            .prompt()
+            .into_diagnostic()?;
 
-    let socket_path: Option<PathBuf> = PathBuf::from(socket_path_input).into();
+        socket_path = PathBuf::from(socket_path_input).into();
+
+        if socket_path.exists() {
+            bail!("socket path already exists");
+        }
+    }
 
     debug!(path = ?socket_path, "socket path defined");
 
-    //check socket_path is not empty
-    let default_socket_socket = socket_path.clone().unwrap();
-
-    let server = tokio::net::UnixListener::bind(&default_socket_socket)
+    let server = tokio::net::UnixListener::bind(&socket_path)
         .into_diagnostic()
         .context("error creating unix socket listener")?;
 
     loop {
-        info!(path = ?default_socket_socket, "waiting for client connections");
+        info!(path = ?socket_path, "waiting for client connections");
 
         tokio::select! {
             result = server.accept() => {
@@ -235,7 +260,7 @@ pub async fn run(cli: &crate::Cli) -> miette::Result<()> {
         }
     }
 
-    std::fs::remove_file(default_socket_socket)
+    std::fs::remove_file(socket_path)
         .into_diagnostic()
         .context("error trying to remove unix socket")?;
 

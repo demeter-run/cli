@@ -34,6 +34,6 @@ pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
         Commands::Details(x) => details::run(x, cli).await,
         Commands::Create(x) => create::run(x, cli).await,
         Commands::Delete(x) => delete::run(x, cli).await,
-        Commands::Tunnel(_x) => tunnel::run(cli).await,
+        Commands::Tunnel(x) => tunnel::run(x, cli).await,
     }
 }
