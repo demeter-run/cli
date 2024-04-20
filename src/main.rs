@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use miette::Context as _;
 use std::path::PathBuf;
 use tracing::Level;
 use tracing_indicatif::IndicatifLayer;
@@ -37,6 +38,10 @@ pub struct Args {
     /// Add extra debugging outputs
     #[arg(short, long, global = true, action)]
     verbose: bool,
+
+    /// Clear any previous config (use with caution)
+    #[arg(long, action)]
+    reset_config: bool,
 }
 
 #[derive(Subcommand)]
@@ -60,6 +65,11 @@ pub struct Cli {
 async fn main() -> miette::Result<()> {
     let args = Args::parse();
     let dirs = dirs::Dirs::try_new(args.root_dir.as_deref())?;
+
+    if args.reset_config {
+        println!("clearing previous config files...");
+        crate::core::clear_config(&dirs).context("clearing previous config files")?;
+    }
 
     let context = core::infer_context(
         args.context.as_deref(),

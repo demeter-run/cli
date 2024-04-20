@@ -16,12 +16,14 @@ pub struct Args {
 #[derive(Parser)]
 pub enum Commands {
     /// List all your ports
+    #[command(alias = "ls")]
     List(list::Args),
     /// Get your port details
     Details(details::Args),
     /// Create a new port
     Create(create::Args),
     /// Delete a port
+    #[command(alias = "rm")]
     Delete(delete::Args),
     /// Create a tunnel to a port, for example, to access the node in a unix.socket file
     Tunnel(tunnel::Args),

@@ -106,7 +106,7 @@ fn load_config(dirs: &crate::dirs::Dirs) -> miette::Result<Config> {
 
     let dto = toml::from_str(&toml)
         .into_diagnostic()
-        .context("serializing config")?;
+        .context("deserializing config")?;
 
     Ok(dto)
 }
@@ -121,6 +121,16 @@ fn save_config(value: Config, dirs: &crate::dirs::Dirs) -> miette::Result<()> {
     std::fs::write(location, toml)
         .into_diagnostic()
         .context("writing config file")?;
+
+    Ok(())
+}
+
+pub fn clear_config(dirs: &crate::dirs::Dirs) -> miette::Result<()> {
+    let location = dirs.root_dir().join("config.toml");
+
+    std::fs::remove_file(location)
+        .into_diagnostic()
+        .context("deleting toml file")?;
 
     Ok(())
 }
