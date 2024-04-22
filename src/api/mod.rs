@@ -1,5 +1,6 @@
 use std::{collections::HashMap, env};
 
+use indexmap::IndexMap;
 use reqwest::{Client, Error};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -62,19 +63,74 @@ pub struct NodePortInstance {
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct PortOptions {
-    pub networks: Vec<String>,
-    pub versions: Option<HashMap<String, Vec<String>>>,
-    pub tiers: Vec<String>,
+    pub networks: IndexMap<String, String>,
+    pub versions: Option<HashMap<String, IndexMap<String, String>>>,
+    pub tiers: IndexMap<String, String>,
 }
 
+// inquire select requires a vector of strings, so we need to transform the values into a vector for the select prompt
+// we
 impl PortOptions {
+    // Network
+    pub fn get_networks(&self) -> Vec<String> {
+        self.networks.values().cloned().collect()
+    }
+
+    pub fn find_network_key_by_value(&self, network_value: &str) -> Option<String> {
+        self.networks.iter().find_map(|(key, value)| {
+            if value == network_value {
+                Some(key.clone())
+            } else {
+                None
+            }
+        })
+    }
+
+    // version
     pub fn get_network_versions(&self, network: &str) -> Vec<String> {
-        self.versions
-            .as_ref()
-            .unwrap()
-            .get(network)
-            .unwrap_or(&vec![])
-            .clone()
+        let mut version_options = Vec::new();
+        if let Some(versions) = &self.versions {
+            if let Some(versions_map) = versions.get(network) {
+                for (_label, version) in versions_map {
+                    version_options.push(version.to_string());
+                }
+            }
+        }
+        version_options
+    }
+
+    pub fn find_version_label_by_number(
+        &self,
+        network: &str,
+        selected_version: &str,
+    ) -> Option<String> {
+        if let Some(versions) = &self.versions {
+            if let Some(version_map) = versions.get(network) {
+                for (label, _version) in version_map {
+                    if selected_version.contains(label) {
+                        return Some(label.clone());
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    // tiers
+    pub fn get_tiers(&self) -> Vec<String> {
+        self.tiers.values().cloned().collect()
+    }
+
+    // @TODO: find a cleaner way to do this
+    pub fn find_tier_key_by_value(&self, formatted_string: &str) -> Option<String> {
+        // Check if tier name is included in the formatted string
+        self.tiers.iter().find_map(|(key, _value)| {
+            if formatted_string.contains(key) {
+                Some(key.clone())
+            } else {
+                None
+            }
+        })
     }
 }
 

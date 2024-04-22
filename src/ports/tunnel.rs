@@ -1,4 +1,7 @@
-use crate::api::{self, Instance, PortInfo, PortOptions};
+use crate::{
+    api::{self, Instance, PortInfo, PortOptions},
+    ports::format::pretty_print_port,
+};
 use clap::Parser;
 use miette::{bail, Context, IntoDiagnostic};
 use std::{path::PathBuf, sync::Arc};
@@ -144,6 +147,8 @@ async fn spawn_new_connection(
     Ok(())
 }
 
+const CARDANO_NODE_KIND: &str = "cardano-node";
+
 // #[instrument("connect", skip_all)]
 pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
     let ctx = cli
@@ -157,32 +162,43 @@ pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
         .prompt()
         .into_diagnostic()?;
 
-    let options: PortOptions = api::get_public(&format!("metadata/ports/{}", "cardano-node"))
+    let options: PortOptions = api::get_public(&format!("metadata/ports/{}", CARDANO_NODE_KIND))
         .await
         .into_diagnostic()?;
 
-    let network_options = options.networks.clone();
+    let network_options = options.get_networks();
 
-    let network = inquire::Select::new("Choose the network", network_options)
+    let selected_network = inquire::Select::new("Choose the network", network_options)
         .prompt()
         .into_diagnostic()?;
 
-    let network_versions = options.get_network_versions(&network);
+    let payload_network: String = options
+        .find_network_key_by_value(&selected_network)
+        .unwrap();
+    let network_versions = options.get_network_versions(&payload_network);
 
-    let version = inquire::Select::new("Choose the version", network_versions)
+    let selected_version = inquire::Select::new("Choose the version", network_versions)
         .prompt()
         .into_diagnostic()?;
 
-    let existing_ports: Vec<PortInfo> = api::get(cli, &format!("ports/{}", "cardano-node"))
+    let payload_version: String = options
+        .find_version_label_by_number(&payload_network, &selected_version)
+        .unwrap();
+
+    let existing_ports: Vec<PortInfo> = api::get(cli, &format!("ports/{}", CARDANO_NODE_KIND))
         .await
         .into_diagnostic()?;
 
     let hostname: String;
     let port_info: PortInfo;
+
     // check if the port already exists using network and version
+    // the network returned from the API is the same as the one selected by the user
+    // the version returned from the API is the one parsed from the user selection
+
     if let Some(port) = existing_ports
         .iter()
-        .find(|p| p.network == network && p.version == version)
+        .find(|p| p.network == selected_network && p.version == payload_version)
     {
         port_info = port.clone();
         match &port.instance {
@@ -199,11 +215,26 @@ pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
                 .into_diagnostic()?;
 
         if create_new_confirm {
-            let new_port = api::create_port(cli, "cardano-node", &network, &version, "1")
-                .await
+            let tier_options = options.get_tiers();
+
+            let selected_tier = inquire::Select::new("Choose the throughput tier", tier_options)
+                .prompt()
                 .into_diagnostic()?;
 
+            let payload_tier = options.find_tier_key_by_value(&selected_tier).unwrap();
+
+            let new_port = api::create_port(
+                cli,
+                CARDANO_NODE_KIND,
+                &payload_network,
+                &payload_version,
+                &payload_tier,
+            )
+            .await
+            .into_diagnostic()?;
+
             port_info = new_port.clone();
+            pretty_print_port(port_info.clone());
 
             match new_port.instance {
                 Instance::NodePort(instance) => {
