@@ -493,7 +493,7 @@ dependencies = [
 
 [[package]]
 name = "dmtrctl"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "base64 0.22.0",
  "clap",
