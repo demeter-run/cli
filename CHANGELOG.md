@@ -2,11 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
-## [unreleased]
+## [1.2.0] - 2024-06-14
 
 ### 🔧 Continuous Integration
 
 - Migrate to cargo-dist for releases (#30)
+
+### ⚙️ Miscellaneous Tasks
+
+- Migrate to cliff for changelogs (#31)
+- Integrate cargo release (#32)
+- Update rustls to v0.23 (#33)
+- Remove redundant rustls dep (#34)
 
 ## [1.1.0] - 2024-04-22
 
