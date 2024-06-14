@@ -71,7 +71,7 @@ async fn connect_remote<'a>(
         .into_diagnostic()
         .context("error loading TLS certificates")?;
 
-    let mut roots = rustls::RootCertStore::empty();
+    let mut roots = tokio_rustls::rustls::RootCertStore::empty();
 
     for cert in certs {
         roots.add(cert).unwrap();

@@ -19,7 +19,6 @@ json = "0.12.4"
 miette = { version = "5.10.0", features = ["fancy"] }
 ocipkg = "0.2.8"
 reqwest = { version = "0.11.20", features = ["blocking", "json"] }
-rustls = "0.23"
 rustls-native-certs = "0.7"
 semver = "1.0.22"
 serde = { version = "1.0.188", features = ["derive"] }
