@@ -19,8 +19,8 @@ json = "0.12.4"
 miette = { version = "5.10.0", features = ["fancy"] }
 ocipkg = "0.2.8"
 reqwest = { version = "0.11.20", features = ["blocking", "json"] }
-rustls = "0.21.7"
-rustls-native-certs = "0.6.3"
+rustls = "0.23"
+rustls-native-certs = "0.7"
 semver = "1.0.22"
 serde = { version = "1.0.188", features = ["derive"] }
 serde_json = "1.0.106"
@@ -28,7 +28,7 @@ socket2 = "0.5.4"
 spinners = "4.1.1"
 thiserror = "1.0.48"
 tokio = { version = "1.32.0", features = ["macros", "rt", "rt-multi-thread", "signal"] }
-tokio-rustls = "0.24.1"
+tokio-rustls = "0.26"
 toml = "0.8.1"
 tracing = "0.1.37"
 tracing-indicatif = "0.3.5"
