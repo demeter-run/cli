@@ -9,7 +9,6 @@ use tokio::{
     io::{AsyncRead, AsyncWrite},
     net::{TcpStream, UnixStream},
 };
-use tokio_rustls::TlsConnector;
 use tracing::{debug, info, warn};
 
 #[derive(Parser)]
@@ -49,7 +48,7 @@ where
 
 const DEFAULT_REMOTE_PORT: u16 = 9443;
 
-async fn connect_remote(
+async fn connect_remote<'a>(
     host: &str,
     port: u16,
 ) -> miette::Result<tokio_rustls::client::TlsStream<TcpStream>> {
@@ -75,21 +74,24 @@ async fn connect_remote(
     let mut roots = rustls::RootCertStore::empty();
 
     for cert in certs {
-        roots.add(&rustls::Certificate(cert.0)).unwrap();
+        roots.add(cert).unwrap();
     }
 
-    let config = rustls::ClientConfig::builder()
-        .with_safe_defaults()
+    let config = tokio_rustls::rustls::ClientConfig::builder()
         .with_root_certificates(Arc::new(roots))
         .with_no_client_auth();
 
     let config = Arc::new(config);
 
-    let domain = rustls::ServerName::try_from(host)
+    let domain = host
+        .to_owned()
+        .try_into()
         .into_diagnostic()
         .context("invalid DNS name")?;
 
-    let remote = TlsConnector::from(config)
+    let connector = tokio_rustls::TlsConnector::from(config);
+
+    let remote = connector
         .connect(domain, remote)
         .await
         .into_diagnostic()
