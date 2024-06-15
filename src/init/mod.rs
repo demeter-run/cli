@@ -14,9 +14,10 @@ pub struct Args {
     api_key: Option<String>,
 }
 
-mod import;
+mod apikey;
 mod login;
 mod manual;
+mod project;
 
 enum ContextOption<'a> {
     Existing(&'a Context),
@@ -38,9 +39,9 @@ impl<'a> Display for ContextOption<'a> {
 pub async fn import_context(dirs: &crate::dirs::Dirs) -> miette::Result<Context> {
     let access_token = login::run().await?;
 
-    let project = import::define_project(&access_token).await?;
+    let project = project::define_project(&access_token).await?;
 
-    let api_key = import::define_api_key(&access_token, &project.namespace).await?;
+    let api_key = apikey::define_api_key(&access_token, &project.namespace).await?;
 
     let ctx = crate::core::Context {
         namespace: crate::core::Namespace::new(&project.namespace, project.caption),
