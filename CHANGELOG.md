@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2024-06-15
+
+### 🚀 Features
+
+- Streamline init flow (#35)
+
+### 🐛 Bug Fixes
+
+- Jump to new project if list is empty (#36)
+- Skip tunnel type with only one option (#37)
+- Ensure user is initialized after login (#38)
+
 ## [1.2.0] - 2024-06-14
 
 ### 🔧 Continuous Integration
@@ -14,6 +26,7 @@ All notable changes to this project will be documented in this file.
 - Integrate cargo release (#32)
 - Update rustls to v0.23 (#33)
 - Remove redundant rustls dep (#34)
+- Release dmtrctl version 1.2.0
 
 ## [1.1.0] - 2024-04-22
 
