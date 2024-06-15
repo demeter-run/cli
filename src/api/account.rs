@@ -30,6 +30,34 @@ where
     Ok(response)
 }
 
+pub async fn initialize_user(access_token: &str) -> Result<String, Error> {
+    let url = format!("{}/users", build_api_url());
+
+    let mut sp = Spinner::new(Spinners::Dots, "".into());
+
+    let client = Client::new();
+    let resp = client
+        .post(url)
+        .header("Authorization", format!("Bearer {}", access_token))
+        .header("agent", build_agent_header())
+        .send()
+        .await?;
+
+    sp.stop_with_symbol("".into());
+
+    check_response_update_header(&resp)?;
+    let response = resp.json::<serde_json::Value>().await?;
+
+    let userid = response
+        .as_object()
+        .and_then(|o| o.get("userId"))
+        .and_then(|x| x.as_str())
+        .unwrap_or_default()
+        .to_owned();
+
+    Ok(userid)
+}
+
 pub async fn create_api_key(
     access_token: &str,
     project: &str,
