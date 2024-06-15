@@ -65,6 +65,17 @@ async fn define_org(access_token: &str) -> miette::Result<Organization> {
         .into_diagnostic()
         .context("looking for existing options")?;
 
+    // HACK: this is weird at the server-side level. It seems that the actual user /
+    // org entities are not created until one attempts to either create / list
+    // projects. This means that we have to assume that an org will be created at a
+    // later time.
+    if orgs.is_empty() {
+        return Ok(Organization {
+            id: 0,
+            name: "future org".to_owned(),
+        });
+    }
+
     // if we have only one org, automatically use that one
     if orgs.len() == 1 {
         return Ok(orgs.first().cloned().unwrap());
