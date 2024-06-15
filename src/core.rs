@@ -19,7 +19,7 @@ pub struct Context {
 
 impl Context {
     pub fn ephemeral(namespace: &str, api_key: &str) -> Self {
-        let namespace = crate::core::Namespace::new(namespace);
+        let namespace = crate::core::Namespace::new(namespace, None);
         let auth = crate::core::Auth::api_key(api_key);
         let cloud = crate::core::Cloud::default();
         let operator = crate::core::Operator::default();
@@ -36,12 +36,14 @@ impl Context {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Namespace {
     pub name: String,
+    pub caption: Option<String>,
 }
 
 impl Namespace {
-    pub fn new(name: &str) -> Self {
+    pub fn new(name: &str, caption: Option<String>) -> Self {
         Self {
             name: name.to_owned(),
+            caption,
         }
     }
 }
@@ -93,7 +95,7 @@ impl Default for Operator {
     }
 }
 
-fn load_config(dirs: &crate::dirs::Dirs) -> miette::Result<Config> {
+pub fn load_config(dirs: &crate::dirs::Dirs) -> miette::Result<Config> {
     let location = dirs.root_dir().join("config.toml");
 
     if !location.exists() {
@@ -111,7 +113,7 @@ fn load_config(dirs: &crate::dirs::Dirs) -> miette::Result<Config> {
     Ok(dto)
 }
 
-fn save_config(value: Config, dirs: &crate::dirs::Dirs) -> miette::Result<()> {
+pub fn save_config(value: Config, dirs: &crate::dirs::Dirs) -> miette::Result<()> {
     let location = dirs.root_dir().join("config.toml");
 
     let toml = toml::to_string(&value)
@@ -131,6 +133,16 @@ pub fn clear_config(dirs: &crate::dirs::Dirs) -> miette::Result<()> {
     std::fs::remove_file(location)
         .into_diagnostic()
         .context("deleting toml file")?;
+
+    Ok(())
+}
+
+pub fn set_default_context(name: &str, dirs: &crate::dirs::Dirs) -> miette::Result<()> {
+    let mut config = load_config(dirs)?;
+
+    config.default_context = Some(name.to_string());
+
+    save_config(config, dirs)?;
 
     Ok(())
 }

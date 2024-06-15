@@ -86,7 +86,8 @@ async fn poll_token(device_code: &str) -> (StatusCode, String) {
 
 pub async fn run() -> miette::Result<String> {
     let (url, device_code) = find_login_url().await;
-    println!("click here to login: {}", url);
+    println!("open this url in your browser to login:");
+    println!("{url}");
 
     for _i in 0..20 {
         tokio::time::sleep(Duration::from_secs(5)).await;
@@ -98,5 +99,5 @@ pub async fn run() -> miette::Result<String> {
         }
     }
 
-    bail!("Error: login failed")
+    bail!("timeout before detecting a login")
 }
