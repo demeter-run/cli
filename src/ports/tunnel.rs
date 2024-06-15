@@ -158,11 +158,12 @@ pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
         .as_ref()
         .ok_or(miette::miette!("missing context"))?;
 
-    let tunnel_options = vec!["node"];
+    // we skip asking for tunnel type since the only one available at the moment is the Cardano node.
 
-    let _tunnel = inquire::Select::new("Choose the port to tunnel", tunnel_options)
-        .prompt()
-        .into_diagnostic()?;
+    // let tunnel_options = vec!["node"];
+    // let _tunnel = inquire::Select::new("Choose the port to tunnel", tunnel_options)
+    //     .prompt()
+    //     .into_diagnostic()?;
 
     let options: PortOptions = api::get_public(&format!("metadata/ports/{}", CARDANO_NODE_KIND))
         .await
