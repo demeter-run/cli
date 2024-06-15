@@ -1,5 +1,7 @@
+use crate::core::Context;
 use clap::Parser;
-use miette::IntoDiagnostic;
+use miette::{Context as _, IntoDiagnostic as _};
+use std::fmt::Display;
 
 #[derive(Parser)]
 pub struct Args {
@@ -12,10 +14,69 @@ pub struct Args {
     api_key: Option<String>,
 }
 
-mod create_project;
-mod list_projects;
+mod import;
 mod login;
 mod manual;
+
+enum ContextOption<'a> {
+    Existing(&'a Context),
+    ImportProject,
+}
+
+impl<'a> Display for ContextOption<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ContextOption::Existing(x) => match x.namespace.caption.as_deref() {
+                Some(caption) => write!(f, "{} ({})", x.namespace.name, caption),
+                _ => write!(f, "{}", x.namespace.name),
+            },
+            ContextOption::ImportProject => f.write_str("<import from cloud>"),
+        }
+    }
+}
+
+pub async fn import_context(dirs: &crate::dirs::Dirs) -> miette::Result<Context> {
+    let access_token = login::run().await?;
+
+    let project = import::define_project(&access_token).await?;
+
+    let api_key = import::define_api_key(&access_token, &project.namespace).await?;
+
+    let ctx = crate::core::Context {
+        namespace: crate::core::Namespace::new(&project.namespace, project.caption),
+        auth: crate::core::Auth::api_key(&api_key),
+        cloud: crate::core::Cloud::default(),
+        operator: crate::core::Operator::default(),
+    };
+
+    crate::core::overwrite_context(&project.namespace, ctx.clone(), false, &dirs)?;
+
+    Ok(ctx)
+}
+
+async fn define_context(dirs: &crate::dirs::Dirs) -> miette::Result<Context> {
+    let config = crate::core::load_config(dirs).context("loading config")?;
+
+    if config.contexts.is_empty() {
+        return import_context(dirs).await;
+    }
+
+    let options = config
+        .contexts
+        .values()
+        .map(ContextOption::Existing)
+        .chain(std::iter::once(ContextOption::ImportProject))
+        .collect();
+
+    let selection = inquire::Select::new("Choose your context", options)
+        .prompt()
+        .into_diagnostic()?;
+
+    match selection {
+        ContextOption::Existing(x) => Ok(x.clone()),
+        ContextOption::ImportProject => import_context(dirs).await,
+    }
+}
 
 pub async fn run(args: Args, dirs: &crate::dirs::Dirs) -> miette::Result<()> {
     if args.namespace.is_some() && args.api_key.is_some() {
@@ -23,54 +84,25 @@ pub async fn run(args: Args, dirs: &crate::dirs::Dirs) -> miette::Result<()> {
         let api_key = args.api_key.unwrap();
         manual::run(&namespace, &api_key, dirs).await?;
         return Ok(());
-    }
+    };
 
-    let options = vec!["list projects", "create project"];
+    println!("Welcome to");
+    println!(include_str!("asciiart.txt"));
     println!("");
-    println!("                  Welcome to");
+    println!("This process will help you set up your CLI to use Demeter platform.");
+    println!("Let's get started!");
+    println!("");
+
+    let ctx = define_context(&dirs).await?;
+
+    crate::core::set_default_context(&ctx.namespace.name, &dirs)?;
+
     println!(
-        r"     ____                      _            
-    |  _ \  ___ _ __ ___   ___| |_ ___ _ __ 
-    | | | |/ _ \ '_ ` _ \ / _ \ __/ _ \ '__|
-    | |_| |  __/ | | | | |  __/ ||  __/ |   
-    |____/ \___|_| |_| |_|\___|\__\___|_|"
+        "You CLI is now configured to use context {}",
+        ctx.namespace.name
     );
-    println!("");
-    println!("This process will help you set up your project to use the Demeter platform.");
-    println!("If you are an existing Demeter user, you can:");
-    println!("  • Choose from a list of your existing projects.");
-    println!("  • Create a brand new project.\n");
-    println!("If you are new to Demeter:");
-    println!("  • Select 'create project' and we will guide you through the setup process.\n");
-    println!("Let's get started!\n");
 
-    let access_token = login::run().await?;
-
-    let setup = inquire::Select::new("How would you like to start?", options)
-        .with_help_message("")
-        .prompt()
-        .into_diagnostic()?;
-
-    match setup {
-        "list projects" => {
-            list_projects::run(&access_token, dirs).await?;
-        }
-        "create project" => {
-            create_project::run(&access_token, dirs).await?;
-        }
-        _ => {
-            println!("Invalid option selected. Exiting...");
-            std::process::exit(1);
-        }
-    }
+    println!("Check out the ports sub-command to start operating");
 
     Ok(())
-}
-
-pub fn parse_project_id(project: &str) -> (String, String) {
-    let parts: Vec<&str> = project.split('/').collect();
-    if parts.len() == 1 {
-        return (parts[0].to_string(), "default".to_string());
-    }
-    (parts[0].to_string(), parts[1].to_string())
 }

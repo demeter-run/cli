@@ -61,7 +61,6 @@ pub async fn create_project(
     access_token: &str,
     organization: &u64,
     name: &str,
-    description: &str,
 ) -> Result<String, Error> {
     let url = format!("{}/projects", build_api_url());
 
@@ -74,8 +73,8 @@ pub async fn create_project(
         .header("agent", build_agent_header())
         .json(&json!({
             "name": name,
-            "description": description,
             "organizationId": organization,
+            "description": "", // we should deprecate the description field
         }))
         .send()
         .await?;
