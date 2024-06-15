@@ -93,9 +93,16 @@ async fn new_project(access_token: &str) -> miette::Result<ProjectRef> {
 }
 
 pub async fn define_project(access_token: &str) -> miette::Result<ProjectRef> {
-    let options: Vec<_> = api::account::get::<Vec<String>>(&access_token, "projects")
+    let projects: Vec<String> = api::account::get::<Vec<String>>(&access_token, "projects")
         .await
-        .into_diagnostic()?
+        .into_diagnostic()
+        .context("fetching projects")?;
+
+    if projects.is_empty() {
+        return new_project(access_token).await;
+    }
+
+    let options = projects
         .into_iter()
         .map(parse_project_ref)
         .map(ProjectOption::Existing)
