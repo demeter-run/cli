@@ -4,8 +4,8 @@ pub mod create;
 mod delete;
 mod format;
 mod list;
+mod node_socket;
 mod show;
-mod tunnel;
 
 #[derive(Parser)]
 pub struct Args {
@@ -25,8 +25,9 @@ pub enum Commands {
     /// Delete a port
     #[command(alias = "rm")]
     Delete(delete::Args),
-    /// Create a tunnel to a port, for example, to access the node in a unix.socket file
-    Tunnel(tunnel::Args),
+    /// Create a Unix socket that connect to a Cardano node port
+    #[command(alias = "tunnel")]
+    NodeSocket(node_socket::Args),
     // Disable(list::Args),
 }
 
@@ -36,6 +37,6 @@ pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
         Commands::Show(x) => show::run(x, cli).await,
         Commands::Create(x) => create::run(x, cli).await,
         Commands::Delete(x) => delete::run(x, cli).await,
-        Commands::Tunnel(x) => tunnel::run(x, cli).await,
+        Commands::NodeSocket(x) => node_socket::run(x, cli).await,
     }
 }
