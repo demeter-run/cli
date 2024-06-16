@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env};
+use std::{collections::HashMap, env, fmt::Display};
 
 use indexmap::IndexMap;
 use reqwest::{Client, Error};
@@ -68,8 +68,8 @@ pub struct PortOptions {
     pub tiers: IndexMap<String, String>,
 }
 
-// inquire select requires a vector of strings, so we need to transform the values into a vector for the select prompt
-// we
+// inquire select requires a vector of strings, so we need to transform the
+// values into a vector for the select prompt we
 impl PortOptions {
     // Network
     pub fn get_networks(&self) -> Vec<String> {
