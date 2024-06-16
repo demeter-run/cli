@@ -11,7 +11,7 @@ use tracing::{debug, info, warn};
 
 #[derive(Parser)]
 pub struct Args {
-    /// ID of the Node port to connect to
+    /// Instance of the port to connect (cardano-node kind)
     port: Option<String>,
 
     /// local path where the unix socket will be created
@@ -144,10 +144,15 @@ impl std::fmt::Display for NodeOption {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "network: {}, version: {} (id: {})",
-            self.0.network, self.0.version, self.0.id
+            "{}/{} ({}, {})",
+            self.0.kind, self.0.id, self.0.network, self.0.version
         )
     }
+}
+
+fn get_instance_parts(instance: &str) -> (String, String) {
+    let parts: Vec<&str> = instance.split('/').collect();
+    (parts[0].to_string(), parts[1].to_string())
 }
 
 async fn define_port(explicit: Option<String>, cli: &crate::Cli) -> miette::Result<PortInfo> {
@@ -159,19 +164,25 @@ async fn define_port(explicit: Option<String>, cli: &crate::Cli) -> miette::Resu
         .collect();
 
     if available.is_empty() {
-        bail!("you don't have any node ports, run dmtrctl ports create");
+        bail!("you don't have any cardano-node ports, run dmtrctl ports create");
     }
 
     if let Some(explicit) = explicit {
+        let (kind, id) = get_instance_parts(&explicit);
+
+        if kind != CARDANO_NODE_KIND {
+            bail!("tunnels are only supported for cardano-node ports");
+        }
+
         let explicit = available
             .iter()
-            .find(|p| p.0.id == explicit)
+            .find(|p| p.0.id == id)
             .ok_or(miette::miette!("can't find port"))?;
 
         return Ok(explicit.0.clone());
     }
 
-    let selection = inquire::Select::new("select node port", available)
+    let selection = inquire::Select::new("select port", available)
         .prompt()
         .into_diagnostic()
         .context("selecting available port")?;
@@ -192,7 +203,7 @@ pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
 
     let hostname = match &port_info.instance {
         Instance::NodePort(x) => &x.authenticated_endpoint,
-        _ => bail!("invalid port instance, needs to be a node"),
+        _ => bail!("invalid port instance, only kind cardano-node support tunnels"),
     };
 
     let socket_path = define_socket_path(args.socket, &port_info, &cli.dirs, ctx)
