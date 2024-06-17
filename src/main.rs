@@ -2,8 +2,7 @@ use clap::{Parser, Subcommand};
 use miette::Context as _;
 use std::path::PathBuf;
 use tracing::Level;
-use tracing_indicatif::IndicatifLayer;
-use tracing_subscriber::prelude::*;
+use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
 mod api;
 mod core;
@@ -80,19 +79,12 @@ async fn main() -> miette::Result<()> {
 
     let cli = Cli { context, dirs };
 
-    let indicatif_layer = IndicatifLayer::new();
-
-    let level = match args.verbose {
-        true => Level::DEBUG,
-        false => Level::INFO,
-    };
-
-    tracing_subscriber::registry()
-        //.with(tracing_subscriber::filter::LevelFilter::INFO)
-        .with(tracing_subscriber::filter::Targets::default().with_target("dmtr", level))
-        .with(tracing_subscriber::fmt::layer().with_writer(indicatif_layer.get_stderr_writer()))
-        .with(indicatif_layer)
-        .init();
+    if args.verbose {
+        tracing_subscriber::registry()
+            //.with(tracing_subscriber::filter::LevelFilter::INFO)
+            .with(tracing_subscriber::filter::Targets::default().with_target("dmtr", Level::DEBUG))
+            .init();
+    }
 
     match args.command {
         Commands::Init(args) => init::run(args, &cli.dirs).await,

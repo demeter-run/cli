@@ -1,10 +1,8 @@
-use std::{collections::HashMap, env, fmt::Display};
-
 use indexmap::IndexMap;
 use reqwest::{Client, Error};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use spinners::{Spinner, Spinners};
+use std::{collections::HashMap, env};
 
 use self::format::format_new_cli_version_available;
 
@@ -142,15 +140,11 @@ where
 
     let client = Client::new();
 
-    let mut sp = Spinner::new(Spinners::Dots, "".into());
-
     let resp = client
         .get(url)
         .header("agent", build_agent_header())
         .send()
         .await?;
-
-    sp.stop_with_symbol("".into());
 
     check_response_update_header(&resp)?;
     let response = resp.json::<T>().await?;
@@ -167,16 +161,12 @@ where
 
     let client = Client::new();
 
-    let mut sp = Spinner::new(Spinners::Dots, "".into());
-
     let resp = client
         .get(url)
         .header("dmtr-api-key", api_key)
         .header("agent", build_agent_header())
         .send()
         .await?;
-
-    sp.stop_with_symbol("".into());
 
     check_response_update_header(&resp)?;
     let response = resp.json::<T>().await?;
@@ -196,8 +186,6 @@ pub async fn create_port(
 
     let client = Client::new();
 
-    let mut sp = Spinner::new(Spinners::Dots, "".into());
-
     let resp = client
         .post(url)
         .header("dmtr-api-key", api_key)
@@ -211,8 +199,6 @@ pub async fn create_port(
         .send()
         .await?;
 
-    sp.stop_with_symbol("".into());
-
     check_response_update_header(&resp)?;
     let response = resp.json::<PortInfo>().await?;
     Ok(response)
@@ -223,7 +209,6 @@ pub async fn delete_port(cli: &crate::Cli, kind: &str, id: &str) -> Result<(), E
 
     let url = format!("{}/{}/ports/{}/{}", base_url, namespace, kind, id);
 
-    let mut sp = Spinner::new(Spinners::Dots, "".into());
     let client = Client::new();
     let _resp = client
         .delete(url)
@@ -231,8 +216,6 @@ pub async fn delete_port(cli: &crate::Cli, kind: &str, id: &str) -> Result<(), E
         .header("agent", build_agent_header())
         .send()
         .await?;
-
-    sp.stop_with_symbol("".into());
 
     check_response_update_header(&_resp)?;
     Ok(())

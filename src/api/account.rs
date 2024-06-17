@@ -1,9 +1,7 @@
-use std::env;
-
 use reqwest::{Client, Error};
 use serde::Deserialize;
 use serde_json::json;
-use spinners::{Spinner, Spinners};
+use std::env;
 
 use super::{build_agent_header, check_response_update_header};
 
@@ -13,8 +11,6 @@ where
 {
     let url = format!("{}/{}", build_api_url(), path);
 
-    let mut sp = Spinner::new(Spinners::Dots, "".into());
-
     let client = Client::new();
     let resp = client
         .get(url)
@@ -22,8 +18,6 @@ where
         .header("agent", build_agent_header())
         .send()
         .await?;
-
-    sp.stop_with_symbol("".into());
 
     check_response_update_header(&resp)?;
     let response = resp.json::<T>().await?;
@@ -33,8 +27,6 @@ where
 pub async fn initialize_user(access_token: &str) -> Result<String, Error> {
     let url = format!("{}/users", build_api_url());
 
-    let mut sp = Spinner::new(Spinners::Dots, "".into());
-
     let client = Client::new();
     let resp = client
         .post(url)
@@ -42,8 +34,6 @@ pub async fn initialize_user(access_token: &str) -> Result<String, Error> {
         .header("agent", build_agent_header())
         .send()
         .await?;
-
-    sp.stop_with_symbol("".into());
 
     check_response_update_header(&resp)?;
     let response = resp.json::<serde_json::Value>().await?;
@@ -65,8 +55,6 @@ pub async fn create_api_key(
 ) -> Result<String, Error> {
     let url = format!("{}/{}/api-key", build_api_url(), project);
 
-    let mut sp = Spinner::new(Spinners::Dots, "".into());
-
     let client = Client::new();
     let resp = client
         .post(url)
@@ -77,8 +65,6 @@ pub async fn create_api_key(
         }))
         .send()
         .await?;
-
-    sp.stop_with_symbol("".into());
 
     check_response_update_header(&resp)?;
     let response = resp.json::<String>().await?;
@@ -92,8 +78,6 @@ pub async fn create_project(
 ) -> Result<String, Error> {
     let url = format!("{}/projects", build_api_url());
 
-    let mut sp = Spinner::new(Spinners::Dots, "".into());
-
     let client = Client::new();
     let resp = client
         .post(url)
@@ -106,8 +90,6 @@ pub async fn create_project(
         }))
         .send()
         .await?;
-
-    sp.stop_with_symbol("".into());
 
     check_response_update_header(&resp)?;
     let response = resp.json::<String>().await?;

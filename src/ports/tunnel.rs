@@ -2,7 +2,10 @@ use crate::api::{self, Instance, PortInfo};
 use clap::Parser;
 use colored::Colorize;
 use miette::{bail, Context, IntoDiagnostic};
-use std::{path::PathBuf, sync::Arc};
+use std::{
+    path::PathBuf,
+    sync::{Arc, Mutex},
+};
 use tokio::{
     io::{AsyncRead, AsyncWrite},
     net::{TcpStream, UnixStream},
@@ -124,13 +127,23 @@ async fn spawn_new_connection(
     local: UnixStream,
     remote_host: &str,
     remote_port: u16,
+    counter: Arc<Mutex<ClientCounter>>,
 ) -> miette::Result<()> {
     info!("new client connected to socket");
 
     let remote = connect_remote(&remote_host, remote_port).await?;
     info!("connected to remote endpoint");
 
-    let copy_op = copy_bytes(local, remote);
+    let copy_op = async move {
+        counter.lock().map(|mut x| x.increase()).unwrap();
+
+        // actual work
+        let result = copy_bytes(local, remote).await;
+
+        counter.lock().map(|mut x| x.decrease()).unwrap();
+
+        result
+    };
 
     tokio::spawn(copy_op);
     info!("proxy running");
@@ -190,6 +203,36 @@ async fn define_port(explicit: Option<String>, cli: &crate::Cli) -> miette::Resu
     Ok(selection.0)
 }
 
+struct ClientCounter {
+    current: u32,
+    total: u32,
+    spinner: spinoff::Spinner,
+}
+
+impl ClientCounter {
+    fn update_msg(&mut self) {
+        self.spinner.update_text(format!(
+            "total clients: {}, active clients {}",
+            self.total, self.current
+        ));
+    }
+    fn increase(&mut self) {
+        self.current += 1;
+        self.total += 1;
+        self.update_msg();
+    }
+
+    fn decrease(&mut self) {
+        self.current -= 1;
+        self.update_msg();
+    }
+
+    fn stop(&mut self) {
+        self.spinner
+            .stop_with_message("stopped serving unix socket");
+    }
+}
+
 const CARDANO_NODE_KIND: &str = "cardano-node";
 
 // #[instrument("connect", skip_all)]
@@ -218,16 +261,23 @@ pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
     println!("🧦 unix socket created, you can connect at:");
     println!("{}", socket_path.to_string_lossy().bright_magenta());
 
-    let mut spinner = spinners::Spinner::new(
-        spinners::Spinners::BouncingBar,
-        "waiting for client connections, CTRL+C to stop".into(),
+    let spinner = spinoff::Spinner::new(
+        spinoff::spinners::BouncingBar,
+        "waiting for client connections, CTRL+C to stop",
+        spinoff::Color::Blue,
     );
+
+    let counter = Arc::new(Mutex::new(ClientCounter {
+        current: 0,
+        total: 0,
+        spinner,
+    }));
 
     loop {
         tokio::select! {
             result = server.accept() => {
                 let (local, _) = result.into_diagnostic()?;
-                spawn_new_connection(local, hostname, DEFAULT_REMOTE_PORT).await?;
+                spawn_new_connection(local, hostname, DEFAULT_REMOTE_PORT, counter.clone()).await?;
             }
             _ = tokio::signal::ctrl_c() => {
                 break;
@@ -235,7 +285,7 @@ pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
         }
     }
 
-    spinner.stop_with_message("stopped serving unix socket".into());
+    counter.lock().map(|mut x| x.stop()).unwrap();
 
     std::fs::remove_file(socket_path)
         .into_diagnostic()
