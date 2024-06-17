@@ -216,6 +216,7 @@ impl ClientCounter {
             self.total, self.current
         ));
     }
+
     fn increase(&mut self) {
         self.current += 1;
         self.total += 1;
