@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.1] - 2024-06-21
+
+### 🐛 Bug Fixes
+
+- Use embedded tls to avoid OS-level requirement (#43)
+
 ## [1.4.0] - 2024-06-17
 
 ### 🚀 Features
@@ -12,6 +18,10 @@ All notable changes to this project will be documented in this file.
 ### 🐛 Bug Fixes
 
 - Use full instance id for tunnel arg (#40)
+
+### ⚙️ Miscellaneous Tasks
+
+- Release dmtrctl version 1.4.0
 
 ## [1.3.0] - 2024-06-15
 
