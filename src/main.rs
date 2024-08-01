@@ -10,6 +10,7 @@ mod dirs;
 mod init;
 mod pages;
 mod ports;
+mod rpc;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]

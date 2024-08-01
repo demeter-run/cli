@@ -1,9 +1,10 @@
 use std::fmt::Display;
 
+use dmtri::demeter::ops::v1alpha as proto;
 use miette::{Context as _, IntoDiagnostic};
 use serde::{Deserialize, Serialize};
 
-use crate::api;
+use crate::{api, rpc};
 
 fn parse_project_ref(project: String) -> ProjectRef {
     let parts: Vec<_> = project.split('/').collect();
@@ -11,19 +12,19 @@ fn parse_project_ref(project: String) -> ProjectRef {
     if parts.len() == 1 {
         return ProjectRef {
             namespace: parts[0].to_owned(),
-            caption: None,
+            name: String::new(),
         };
     }
 
     ProjectRef {
         namespace: parts[0].to_owned(),
-        caption: Some(parts[1].to_owned()),
+        name: parts[1].to_owned(),
     }
 }
 
 pub struct ProjectRef {
     pub namespace: String,
-    pub caption: Option<String>,
+    pub name: String,
 }
 
 enum ProjectOption {
@@ -35,12 +36,7 @@ impl Display for ProjectOption {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ProjectOption::Existing(x) => {
-                write!(
-                    f,
-                    "{} ({})",
-                    x.namespace,
-                    x.caption.as_deref().unwrap_or_default()
-                )
+                write!(f, "{} ({})", x.namespace, x.name)
             }
             ProjectOption::New => f.write_str("<new project>"),
         }
@@ -93,21 +89,17 @@ async fn new_project(access_token: &str) -> miette::Result<ProjectRef> {
 }
 
 pub async fn define_project(access_token: &str) -> miette::Result<ProjectRef> {
-    let projects: Vec<String> = api::account::get::<Vec<String>>(&access_token, "projects")
-        .await
-        .into_diagnostic()
-        .context("fetching projects")?;
+    let projects: Vec<proto::Project> = rpc::projects::find_projects(access_token).await?;
 
     if projects.is_empty() {
         return new_project(access_token).await;
     }
 
     let options = projects
-        .into_iter()
-        .map(parse_project_ref)
-        .map(ProjectOption::Existing)
+        .iter()
+        .map(|x| ProjectOption::Existing(parse_project_ref(x.namespace.clone())))
         .chain(std::iter::once(ProjectOption::New))
-        .collect();
+        .collect::<Vec<_>>();
 
     let selection = inquire::Select::new("Choose your project", options)
         .prompt()
@@ -115,6 +107,6 @@ pub async fn define_project(access_token: &str) -> miette::Result<ProjectRef> {
 
     match selection {
         ProjectOption::Existing(x) => Ok(x),
-        ProjectOption::New => new_project(&access_token).await,
+        ProjectOption::New => new_project(access_token).await,
     }
 }

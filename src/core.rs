@@ -9,7 +9,7 @@ pub struct Config {
     pub default_context: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Context {
     pub namespace: Namespace,
     pub cloud: Cloud,
@@ -33,22 +33,22 @@ impl Context {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Namespace {
     pub name: String,
-    pub caption: Option<String>,
+    pub namespace: Option<String>,
 }
 
 impl Namespace {
-    pub fn new(name: &str, caption: Option<String>) -> Self {
+    pub fn new(name: &str, namespace: Option<String>) -> Self {
         Self {
             name: name.to_owned(),
-            caption,
+            namespace,
         }
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Auth {
     pub name: String,
     pub method: String,
@@ -67,7 +67,7 @@ impl Auth {
 
 const DEFAULT_CLOUD: &str = "cloud0.txpipe.io";
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Cloud {
     pub name: String,
 }
@@ -80,7 +80,7 @@ impl Default for Cloud {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Operator {
     pub name: String,
     pub entrypoint: String,

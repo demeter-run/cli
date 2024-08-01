@@ -27,8 +27,8 @@ enum ContextOption<'a> {
 impl<'a> Display for ContextOption<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ContextOption::Existing(x) => match x.namespace.caption.as_deref() {
-                Some(caption) => write!(f, "{} ({})", x.namespace.name, caption),
+            ContextOption::Existing(x) => match x.namespace.namespace.as_ref() {
+                Some(namespace) => write!(f, "{} ({})", x.namespace.name, namespace),
                 _ => write!(f, "{}", x.namespace.name),
             },
             ContextOption::ImportProject => f.write_str("<import from cloud>"),
@@ -44,7 +44,7 @@ pub async fn import_context(dirs: &crate::dirs::Dirs) -> miette::Result<Context>
     let api_key = apikey::define_api_key(&access_token, &project.namespace).await?;
 
     let ctx = crate::core::Context {
-        namespace: crate::core::Namespace::new(&project.namespace, project.caption),
+        namespace: crate::core::Namespace::new(&project.namespace, Some(project.name)),
         auth: crate::core::Auth::api_key(&api_key),
         cloud: crate::core::Cloud::default(),
         operator: crate::core::Operator::default(),
