@@ -5,12 +5,14 @@ use tracing::Level;
 use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
 mod api;
-mod core;
+mod context;
 mod dirs;
 mod init;
 mod pages;
 mod ports;
 mod rpc;
+
+extern crate core;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -58,7 +60,7 @@ pub enum Commands {
 
 pub struct Cli {
     pub dirs: dirs::Dirs,
-    pub context: Option<core::Context>,
+    pub context: Option<context::Context>,
 }
 
 #[tokio::main]
@@ -68,10 +70,10 @@ async fn main() -> miette::Result<()> {
 
     if args.reset_config {
         println!("clearing previous config files...");
-        crate::core::clear_config(&dirs).context("clearing previous config files")?;
+        crate::context::clear_config(&dirs).context("clearing previous config files")?;
     }
 
-    let context = core::infer_context(
+    let context = context::infer_context(
         args.context.as_deref(),
         args.namespace.as_deref(),
         args.api_key.as_deref(),

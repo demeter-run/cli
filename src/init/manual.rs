@@ -12,11 +12,11 @@ pub async fn run(namespace: &str, api_key: &str, dirs: &crate::dirs::Dirs) -> mi
         .prompt()
         .into_diagnostic()?;
 
-    let dto = crate::core::Context::ephemeral(&namespace, &api_key);
+    let dto = crate::context::Context::ephemeral(&namespace, &api_key);
 
     let namespace = dto.project.namespace.clone();
 
-    crate::core::overwrite_context(&namespace, dto, is_default, &dirs)?;
+    crate::context::overwrite_context(&namespace, dto, is_default, &dirs)?;
 
     Ok(())
 }

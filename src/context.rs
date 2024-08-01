@@ -19,10 +19,10 @@ pub struct Context {
 
 impl Context {
     pub fn ephemeral(namespace: &str, api_key: &str) -> Self {
-        let project = crate::core::Project::new(namespace, None);
-        let auth = crate::core::Auth::api_key(api_key);
-        let cloud = crate::core::Cloud::default();
-        let operator = crate::core::Operator::default();
+        let project = crate::context::Project::new(namespace, None);
+        let auth = crate::context::Auth::api_key(api_key);
+        let cloud = crate::context::Cloud::default();
+        let operator = crate::context::Operator::default();
 
         Self {
             project,

@@ -1,4 +1,4 @@
-use crate::core::Context;
+use crate::context::Context;
 use clap::Parser;
 use miette::{Context as _, IntoDiagnostic as _};
 use std::fmt::Display;
@@ -17,7 +17,7 @@ pub struct Args {
 mod apikey;
 mod login;
 mod manual;
-mod project;
+pub mod project;
 
 enum ContextOption<'a> {
     Existing(&'a Context),
@@ -40,24 +40,23 @@ pub async fn import_context(dirs: &crate::dirs::Dirs) -> miette::Result<Context>
     let access_token = login::run().await?;
 
     let project = project::define_project(&access_token).await?;
-    println!("Project found: {}", project.namespace);
 
     let api_key = apikey::define_api_key(&access_token, &project.namespace).await?;
 
-    let ctx = crate::core::Context {
-        project: crate::core::Project::new(&project.namespace, Some(project.name)),
-        auth: crate::core::Auth::api_key(&api_key),
-        cloud: crate::core::Cloud::default(),
-        operator: crate::core::Operator::default(),
+    let ctx = crate::context::Context {
+        project: crate::context::Project::new(&project.namespace, Some(project.name)),
+        auth: crate::context::Auth::api_key(&api_key),
+        cloud: crate::context::Cloud::default(),
+        operator: crate::context::Operator::default(),
     };
 
-    crate::core::overwrite_context(&project.namespace, ctx.clone(), false, &dirs)?;
+    crate::context::overwrite_context(&project.namespace, ctx.clone(), false, dirs)?;
 
     Ok(ctx)
 }
 
 async fn define_context(dirs: &crate::dirs::Dirs) -> miette::Result<Context> {
-    let config = crate::core::load_config(dirs).context("loading config")?;
+    let config = crate::context::load_config(dirs).context("loading config")?;
 
     if config.contexts.is_empty() {
         return import_context(dirs).await;
@@ -90,14 +89,14 @@ pub async fn run(args: Args, dirs: &crate::dirs::Dirs) -> miette::Result<()> {
 
     println!("Welcome to");
     println!(include_str!("asciiart.txt"));
-    println!("");
+    println!("\n");
     println!("This process will help you set up your CLI to use Demeter platform.");
     println!("Let's get started!");
-    println!("");
+    println!("\n");
 
-    let ctx = define_context(&dirs).await?;
+    let ctx = define_context(dirs).await?;
 
-    crate::core::set_default_context(&ctx.project.namespace, &dirs)?;
+    crate::context::set_default_context(&ctx.project.namespace, dirs)?;
 
     println!(
         "You CLI is now configured to use context {}",

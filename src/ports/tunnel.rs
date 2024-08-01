@@ -108,7 +108,7 @@ fn define_socket_path(
     explicit: Option<PathBuf>,
     port: &PortInfo,
     dirs: &crate::dirs::Dirs,
-    ctx: &crate::core::Context,
+    ctx: &crate::context::Context,
 ) -> miette::Result<PathBuf> {
     let default = dirs
         .ensure_tmp_dir(&ctx.project.namespace)?
@@ -131,7 +131,7 @@ async fn spawn_new_connection(
 ) -> miette::Result<()> {
     info!("new client connected to socket");
 
-    let remote = connect_remote(&remote_host, remote_port).await?;
+    let remote = connect_remote(remote_host, remote_port).await?;
     info!("connected to remote endpoint");
 
     let copy_op = async move {
