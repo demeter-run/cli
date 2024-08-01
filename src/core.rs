@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use miette::{Context as MietteContext, IntoDiagnostic};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Default)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Config {
     pub contexts: HashMap<String, Context>,
     pub default_context: Option<String>,
@@ -11,7 +11,7 @@ pub struct Config {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Context {
-    pub namespace: Namespace,
+    pub project: Project,
     pub cloud: Cloud,
     pub operator: Operator,
     pub auth: Auth,
@@ -19,13 +19,13 @@ pub struct Context {
 
 impl Context {
     pub fn ephemeral(namespace: &str, api_key: &str) -> Self {
-        let namespace = crate::core::Namespace::new(namespace, None);
+        let project = crate::core::Project::new(namespace, None);
         let auth = crate::core::Auth::api_key(api_key);
         let cloud = crate::core::Cloud::default();
         let operator = crate::core::Operator::default();
 
         Self {
-            namespace,
+            project,
             auth,
             cloud,
             operator,
@@ -34,16 +34,16 @@ impl Context {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct Namespace {
-    pub name: String,
-    pub namespace: Option<String>,
+pub struct Project {
+    pub namespace: String,
+    pub name: Option<String>,
 }
 
-impl Namespace {
-    pub fn new(name: &str, namespace: Option<String>) -> Self {
+impl Project {
+    pub fn new(namespace: &str, name: Option<String>) -> Self {
         Self {
-            name: name.to_owned(),
-            namespace,
+            namespace: namespace.to_owned(),
+            name,
         }
     }
 }
@@ -97,6 +97,7 @@ impl Default for Operator {
 
 pub fn load_config(dirs: &crate::dirs::Dirs) -> miette::Result<Config> {
     let location = dirs.root_dir().join("config.toml");
+    println!("config location: {:?}", location);
 
     if !location.exists() {
         return Ok(Config::default());
@@ -106,9 +107,13 @@ pub fn load_config(dirs: &crate::dirs::Dirs) -> miette::Result<Config> {
         .into_diagnostic()
         .context("reading project config file")?;
 
+    println!("config toml: {}", toml);
+
     let dto = toml::from_str(&toml)
         .into_diagnostic()
         .context("deserializing config")?;
+
+    println!("config: {:?}", dto);
 
     Ok(dto)
 }

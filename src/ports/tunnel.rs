@@ -111,7 +111,7 @@ fn define_socket_path(
     ctx: &crate::core::Context,
 ) -> miette::Result<PathBuf> {
     let default = dirs
-        .ensure_tmp_dir(&ctx.namespace.name)?
+        .ensure_tmp_dir(&ctx.project.namespace)?
         .join(format!("{}-{}.socket", port.network, port.version));
 
     let path = explicit.to_owned().unwrap_or(default);

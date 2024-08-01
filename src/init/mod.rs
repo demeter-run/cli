@@ -27,9 +27,9 @@ enum ContextOption<'a> {
 impl<'a> Display for ContextOption<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ContextOption::Existing(x) => match x.namespace.namespace.as_ref() {
-                Some(namespace) => write!(f, "{} ({})", x.namespace.name, namespace),
-                _ => write!(f, "{}", x.namespace.name),
+            ContextOption::Existing(x) => match &x.project.name {
+                Some(name) => write!(f, "{} ({})", x.project.namespace, name),
+                _ => write!(f, "{}", x.project.namespace),
             },
             ContextOption::ImportProject => f.write_str("<import from cloud>"),
         }
@@ -40,11 +40,12 @@ pub async fn import_context(dirs: &crate::dirs::Dirs) -> miette::Result<Context>
     let access_token = login::run().await?;
 
     let project = project::define_project(&access_token).await?;
+    println!("Project found: {}", project.namespace);
 
     let api_key = apikey::define_api_key(&access_token, &project.namespace).await?;
 
     let ctx = crate::core::Context {
-        namespace: crate::core::Namespace::new(&project.namespace, Some(project.name)),
+        project: crate::core::Project::new(&project.namespace, Some(project.name)),
         auth: crate::core::Auth::api_key(&api_key),
         cloud: crate::core::Cloud::default(),
         operator: crate::core::Operator::default(),
@@ -96,11 +97,11 @@ pub async fn run(args: Args, dirs: &crate::dirs::Dirs) -> miette::Result<()> {
 
     let ctx = define_context(&dirs).await?;
 
-    crate::core::set_default_context(&ctx.namespace.name, &dirs)?;
+    crate::core::set_default_context(&ctx.project.namespace, &dirs)?;
 
     println!(
         "You CLI is now configured to use context {}",
-        ctx.namespace.name
+        ctx.project.namespace
     );
 
     println!("Check out the ports sub-command to start operating");

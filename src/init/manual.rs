@@ -14,9 +14,9 @@ pub async fn run(namespace: &str, api_key: &str, dirs: &crate::dirs::Dirs) -> mi
 
     let dto = crate::core::Context::ephemeral(&namespace, &api_key);
 
-    let name = dto.namespace.name.clone();
+    let namespace = dto.project.namespace.clone();
 
-    crate::core::overwrite_context(&name, dto, is_default, &dirs)?;
+    crate::core::overwrite_context(&namespace, dto, is_default, &dirs)?;
 
     Ok(())
 }

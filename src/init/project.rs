@@ -6,20 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{api, rpc};
 
-fn parse_project_ref(project: String) -> ProjectRef {
-    let parts: Vec<_> = project.split('/').collect();
-
-    if parts.len() == 1 {
-        return ProjectRef {
-            namespace: parts[0].to_owned(),
-            name: String::new(),
-        };
-    }
-
-    ProjectRef {
-        namespace: parts[0].to_owned(),
-        name: parts[1].to_owned(),
-    }
+fn parse_project_ref(namespace: String, name: String) -> ProjectRef {
+    ProjectRef { namespace, name }
 }
 
 pub struct ProjectRef {
@@ -85,7 +73,8 @@ async fn new_project(access_token: &str) -> miette::Result<ProjectRef> {
         .await
         .into_diagnostic()?;
 
-    Ok(parse_project_ref(project))
+    // Ok(parse_project_ref(project))
+    todo!()
 }
 
 pub async fn define_project(access_token: &str) -> miette::Result<ProjectRef> {
@@ -97,7 +86,7 @@ pub async fn define_project(access_token: &str) -> miette::Result<ProjectRef> {
 
     let options = projects
         .iter()
-        .map(|x| ProjectOption::Existing(parse_project_ref(x.namespace.clone())))
+        .map(|x| ProjectOption::Existing(parse_project_ref(x.namespace.clone(), x.name.clone())))
         .chain(std::iter::once(ProjectOption::New))
         .collect::<Vec<_>>();
 

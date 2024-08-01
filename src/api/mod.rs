@@ -223,7 +223,7 @@ pub async fn delete_port(cli: &crate::Cli, kind: &str, id: &str) -> Result<(), E
 
 fn extract_context_data(cli: &crate::Cli) -> (String, String, String) {
     let api_key = cli.context.as_ref().unwrap().auth.token.clone();
-    let namespace = cli.context.as_ref().unwrap().namespace.name.clone();
+    let namespace = cli.context.as_ref().unwrap().project.namespace.clone();
     let base_url = format!("{}/mgmt/project", get_base_url());
 
     (api_key, namespace, base_url)
