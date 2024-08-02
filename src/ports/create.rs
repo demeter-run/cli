@@ -6,7 +6,7 @@ use miette::IntoDiagnostic;
 use crate::{
     api::{self, PortOptions},
     context::extract_context_data,
-    ports::format::{pretty_print_port, pretty_print_ports_table},
+    ports::format::pretty_print_ports_table,
     rpc,
 };
 

@@ -1,7 +1,7 @@
 use clap::Parser;
 use miette::IntoDiagnostic;
 
-use crate::{api::delete_port, rpc};
+use crate::api::delete_port;
 
 #[derive(Parser)]
 pub struct Args {
