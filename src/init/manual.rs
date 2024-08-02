@@ -1,6 +1,12 @@
 use miette::IntoDiagnostic;
 
-pub async fn run(namespace: &str, api_key: &str, dirs: &crate::dirs::Dirs) -> miette::Result<()> {
+pub async fn run(
+    id: &str,
+    namespace: &str,
+    api_key: &str,
+    access_token: &str,
+    dirs: &crate::dirs::Dirs,
+) -> miette::Result<()> {
     println!("Setting up context for:\n");
     println!("  Namespace: {}", namespace);
     println!("  API key: {}\n", api_key);
@@ -12,11 +18,11 @@ pub async fn run(namespace: &str, api_key: &str, dirs: &crate::dirs::Dirs) -> mi
         .prompt()
         .into_diagnostic()?;
 
-    let dto = crate::context::Context::ephemeral(&namespace, &api_key);
+    let dto = crate::context::Context::ephemeral(id, namespace, api_key, access_token);
 
     let namespace = dto.project.namespace.clone();
 
-    crate::context::overwrite_context(&namespace, dto, is_default, &dirs)?;
+    crate::context::overwrite_context(&namespace, dto, is_default, dirs)?;
 
     Ok(())
 }

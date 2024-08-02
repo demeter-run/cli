@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use miette::{Context as MietteContext, IntoDiagnostic};
 use serde::{Deserialize, Serialize};
 
+use crate::rpc::get_base_url;
+
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Config {
     pub contexts: HashMap<String, Context>,
@@ -18,9 +20,9 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn ephemeral(namespace: &str, api_key: &str) -> Self {
-        let project = crate::context::Project::new(namespace, None);
-        let auth = crate::context::Auth::api_key(api_key);
+    pub fn ephemeral(id: &str, namespace: &str, api_key: &str, access_token: &str) -> Self {
+        let project = crate::context::Project::new(id, namespace, None);
+        let auth = crate::context::Auth::api_key(access_token, api_key);
         let cloud = crate::context::Cloud::default();
         let operator = crate::context::Operator::default();
 
@@ -35,13 +37,15 @@ impl Context {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Project {
-    pub namespace: String,
+    pub id: String,
     pub name: Option<String>,
+    pub namespace: String,
 }
 
 impl Project {
-    pub fn new(namespace: &str, name: Option<String>) -> Self {
+    pub fn new(id: &str, namespace: &str, name: Option<String>) -> Self {
         Self {
+            id: id.to_owned(),
             namespace: namespace.to_owned(),
             name,
         }
@@ -53,14 +57,16 @@ pub struct Auth {
     pub name: String,
     pub method: String,
     pub token: String,
+    pub access_token: String,
 }
 
 impl Auth {
-    pub fn api_key(token: &str) -> Self {
+    pub fn api_key(access_token: &str, api_key: &str) -> Self {
         Self {
             name: "default".to_owned(),
             method: "ApiKey".to_owned(),
-            token: token.to_owned(),
+            token: api_key.to_owned(),
+            access_token: access_token.to_owned(),
         }
     }
 }
@@ -97,7 +103,6 @@ impl Default for Operator {
 
 pub fn load_config(dirs: &crate::dirs::Dirs) -> miette::Result<Config> {
     let location = dirs.root_dir().join("config.toml");
-    println!("config location: {:?}", location);
 
     if !location.exists() {
         return Ok(Config::default());
@@ -107,13 +112,9 @@ pub fn load_config(dirs: &crate::dirs::Dirs) -> miette::Result<Config> {
         .into_diagnostic()
         .context("reading project config file")?;
 
-    println!("config toml: {}", toml);
-
     let dto = toml::from_str(&toml)
         .into_diagnostic()
         .context("deserializing config")?;
-
-    println!("config: {:?}", dto);
 
     Ok(dto)
 }
@@ -192,19 +193,32 @@ pub fn load_default_context(dirs: &crate::dirs::Dirs) -> miette::Result<Option<C
     Ok(None)
 }
 pub fn infer_context(
+    id: Option<&str>,
     name: Option<&str>,
     namespace: Option<&str>,
     api_key: Option<&str>,
+    access_token: Option<&str>,
     dirs: &crate::dirs::Dirs,
 ) -> miette::Result<Option<Context>> {
-    match (name, namespace, api_key) {
-        (None, Some(ns), Some(ak)) => Ok(Some(Context::ephemeral(ns, ak))),
-        (None, None, None) => load_default_context(dirs),
-        (Some(context), None, None) => load_context_by_name(context, dirs),
-        (None, None, Some(_)) => Err(miette::miette!("missing namespace value")),
-        (None, Some(_), None) => Err(miette::miette!("missing api key value")),
+    match (id, name, namespace, api_key, access_token) {
+        (Some(id), None, Some(ns), Some(ak), Some(t)) => {
+            Ok(Some(Context::ephemeral(id, ns, ak, t)))
+        }
+        (None, None, None, None, None) => load_default_context(dirs),
+        (None, Some(context), None, None, None) => load_context_by_name(context, dirs),
+        (None, None, None, Some(_), None) => Err(miette::miette!("missing namespace or id value")),
+        (Some(_), None, Some(_), None, None) => Err(miette::miette!("missing api key value")),
         (..) => Err(miette::miette!(
             "conflicting values, specify either a context or namespace"
         )),
     }
+}
+
+pub fn extract_context_data(cli: &crate::Cli) -> (String, String, String, String) {
+    let api_key = cli.context.as_ref().unwrap().auth.token.clone();
+    let access_token = cli.context.as_ref().unwrap().auth.access_token.clone();
+    let namespace = cli.context.as_ref().unwrap().project.namespace.clone();
+    let id = cli.context.as_ref().unwrap().project.id.clone();
+
+    (access_token, api_key, id, namespace)
 }

@@ -5,11 +5,16 @@ use miette::{Context as _, IntoDiagnostic};
 
 use crate::rpc;
 
-pub fn parse_project_ref(namespace: String, name: String) -> ProjectRef {
-    ProjectRef { namespace, name }
+pub fn parse_project_ref(id: String, namespace: String, name: String) -> ProjectRef {
+    ProjectRef {
+        id,
+        namespace,
+        name,
+    }
 }
 
 pub struct ProjectRef {
+    pub id: String,
     pub namespace: String,
     pub name: String,
 }
@@ -42,7 +47,7 @@ async fn new_project(access_token: &str) -> miette::Result<ProjectRef> {
 }
 
 pub async fn define_project(access_token: &str) -> miette::Result<ProjectRef> {
-    let projects: Vec<proto::Project> = rpc::projects::find_projects(access_token).await?;
+    let projects: Vec<proto::Project> = rpc::projects::find_all(access_token).await?;
 
     if projects.is_empty() {
         return new_project(access_token).await;
@@ -50,7 +55,13 @@ pub async fn define_project(access_token: &str) -> miette::Result<ProjectRef> {
 
     let options = projects
         .iter()
-        .map(|x| ProjectOption::Existing(parse_project_ref(x.namespace.clone(), x.name.clone())))
+        .map(|project| {
+            ProjectOption::Existing(parse_project_ref(
+                project.id.clone(),
+                project.namespace.clone(),
+                project.name.clone(),
+            ))
+        })
         .chain(std::iter::once(ProjectOption::New))
         .collect::<Vec<_>>();
 
@@ -59,7 +70,7 @@ pub async fn define_project(access_token: &str) -> miette::Result<ProjectRef> {
         .into_diagnostic()?;
 
     match selection {
-        ProjectOption::Existing(x) => Ok(x),
+        ProjectOption::Existing(project) => Ok(project),
         ProjectOption::New => new_project(access_token).await,
     }
 }

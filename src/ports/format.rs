@@ -3,6 +3,7 @@ use colored::*;
 use comfy_table::modifiers::UTF8_ROUND_CORNERS;
 use comfy_table::presets::UTF8_FULL;
 use comfy_table::{ContentArrangement, Table};
+use dmtri::demeter::ops::v1alpha::Resource;
 
 pub fn pretty_print_port(port: PortInfo) {
     let mut lines = vec![port.name.clone()];
@@ -46,7 +47,7 @@ pub fn pretty_print_port(port: PortInfo) {
         // let mut padded_line = format!("{: <1$}", content, box_width - margin);
         if index == 0 {
             // print empty line
-            println!("");
+            println!("\n");
             println!("{}", content.color(Color::Green).bold());
         } else {
             println!("{}", content);
@@ -56,7 +57,7 @@ pub fn pretty_print_port(port: PortInfo) {
     println!(); // Optional: empty line for spacing between entries
 }
 
-pub fn pretty_print_ports_table(ports: Vec<PortInfo>) {
+pub fn pretty_print_ports_table(ports: Vec<Resource>) {
     let mut table = Table::new();
 
     table
@@ -67,7 +68,9 @@ pub fn pretty_print_ports_table(ports: Vec<PortInfo>) {
 
     for port in ports {
         let instance = format_instance(&port.id, &port.kind);
-        table.add_row(vec![instance, port.version, port.tier]);
+        // // TODO: must deserialize the port.data to get the version and tier
+        // table.add_row(vec![instance, port.version, port.tier]);
+        table.add_row(vec![instance]);
     }
 
     println!("{table}");

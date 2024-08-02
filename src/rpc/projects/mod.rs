@@ -9,7 +9,7 @@ use crate::{
 
 use super::get_base_url;
 
-pub async fn find_projects(access_token: &str) -> miette::Result<Vec<proto::Project>> {
+pub async fn find_all(access_token: &str) -> miette::Result<Vec<proto::Project>> {
     let interceptor = auth::interceptor(access_token.to_owned()).await;
 
     let rpc_url = get_base_url();
@@ -46,10 +46,11 @@ pub async fn create_project(access_token: &str, name: &str) -> miette::Result<Pr
 
     let response = client.create_project(request).await.into_diagnostic()?;
     let projec_inner = response.into_inner();
+    let id = projec_inner.id;
     let name = projec_inner.name;
     let namespace = projec_inner.namespace;
 
-    let project = parse_project_ref(namespace.to_owned(), name.to_owned());
+    let project = parse_project_ref(id, namespace, name);
 
     Ok(project)
 }

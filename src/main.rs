@@ -21,6 +21,9 @@ pub struct Args {
     #[command(subcommand)]
     command: Commands,
 
+    #[arg(short, long, global = true, env = "DMTR_ID")]
+    id: Option<String>,
+
     /// Name of the namespace we're working on
     #[arg(short, long, global = true, env = "DMTR_NAMESPACE")]
     namespace: Option<String>,
@@ -28,6 +31,10 @@ pub struct Args {
     /// The api key to use as authentication
     #[arg(short, long, global = true, env = "DMTR_API_KEY")]
     api_key: Option<String>,
+
+    /// The access token to use as authentication
+    #[arg(short, long, global = true, env = "DMTR_ACCESS_TOKEN")]
+    access_token: Option<String>,
 
     /// Name of the context we're working on
     #[arg(short, long, global = true, env = "DMTR_CONTEXT")]
@@ -75,8 +82,10 @@ async fn main() -> miette::Result<()> {
 
     let context = context::infer_context(
         args.context.as_deref(),
+        args.id.as_deref(),
         args.namespace.as_deref(),
         args.api_key.as_deref(),
+        args.access_token.as_deref(),
         &dirs,
     )?;
 
