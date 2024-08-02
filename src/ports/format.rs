@@ -10,6 +10,8 @@ pub fn pretty_print_port(port: PortInfo) {
     lines.push("".to_string()); // Empty line for spacing
     lines.push(format!("ID: {}/{}", port.kind, port.id));
 
+    // TODO: for rpc calls we need to deserialize the port.data to get the version
+    // and tier?
     match &port.instance {
         Instance::PostgresPort(instance) => {
             lines.push(format!("Network: {}", port.network));
