@@ -48,7 +48,7 @@ pub async fn import_context(dirs: &crate::dirs::Dirs) -> miette::Result<Context>
 
     let project = project::define_project(&access_token).await?;
 
-    let api_key = apikey::define_api_key(&access_token, &project.namespace).await?;
+    let api_key = apikey::define_api_key(&access_token, &project.id).await?;
 
     let ctx = crate::context::Context {
         project: crate::context::Project::new(&project.id, &project.namespace, Some(project.name)),

@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use miette::IntoDiagnostic as _;
 
-use crate::api;
+use crate::rpc;
 
 enum MaxKeysOptions {
     TryAgain,
@@ -19,17 +19,16 @@ impl Display for MaxKeysOptions {
 }
 
 pub async fn define_api_key(access_token: &str, project_id: &str) -> miette::Result<String> {
-    let mut api_key: String = api::account::create_api_key(access_token, &project_id, "dmtrctl")
-        .await
-        .into_diagnostic()?;
+    println!("Setting up API key for project {}", project_id);
+    let api_key_result = rpc::projects::create_secret(access_token, project_id, "dmtrctl").await;
+    let mut api_key = api_key_result.unwrap_or_default();
 
     if !api_key.is_empty() {
         return Ok(api_key);
     }
 
     println!("We need to configure an API KEY for your project but you've already generated the max amount (2).");
-    println!("You can manage your existing key from the web console:");
-    println!("https://console.us1.demeter.run/{}/settings", project_id);
+    println!("You can manage your existing key from the web console.");
     println!();
 
     while api_key.is_empty() {
@@ -42,9 +41,7 @@ pub async fn define_api_key(access_token: &str, project_id: &str) -> miette::Res
 
         match next {
             MaxKeysOptions::TryAgain => {
-                api_key = api::account::create_api_key(access_token, &project_id, "dmtrctl")
-                    .await
-                    .into_diagnostic()?;
+                api_key = rpc::projects::create_secret(access_token, project_id, "dmtrctl").await?;
             }
             MaxKeysOptions::EnterManually => {
                 api_key = inquire::Password::new("API Key")

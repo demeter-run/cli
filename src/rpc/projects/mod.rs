@@ -54,3 +54,35 @@ pub async fn create_project(access_token: &str, name: &str) -> miette::Result<Pr
 
     Ok(project)
 }
+
+pub async fn create_secret(
+    access_token: &str,
+    project_id: &str,
+    name: &str,
+) -> miette::Result<String> {
+    let interceptor = auth::interceptor(access_token.to_owned()).await;
+
+    let rpc_url = get_base_url();
+    let channel = Channel::builder(rpc_url.parse().into_diagnostic()?)
+        .connect()
+        .await
+        .into_diagnostic()?;
+
+    let mut client =
+        proto::project_service_client::ProjectServiceClient::with_interceptor(channel, interceptor);
+
+    let request = tonic::Request::new(proto::CreateProjectSecretRequest {
+        project_id: project_id.to_owned(),
+        name: name.to_owned(),
+    });
+
+    let response = client
+        .create_project_secret(request)
+        .await
+        .into_diagnostic()?;
+
+    let api_key = response.into_inner().key;
+    println!("API key: {:?}", api_key);
+
+    Ok(api_key)
+}
