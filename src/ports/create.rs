@@ -1,5 +1,8 @@
+use std::collections::HashMap;
+
 use clap::Parser;
 use dmtri::demeter::ops::v1alpha::Resource;
+use indexmap::IndexMap;
 use miette::IntoDiagnostic;
 
 use crate::{
@@ -18,22 +21,21 @@ pub struct Args {
 
 pub async fn run(_args: Args, cli: &crate::Cli) -> miette::Result<()> {
     let (access_token, _, id, _) = extract_context_data(cli);
-    let kind_options: Vec<Resource> = rpc::resources::find(&access_token, &id).await?;
+
+    let kind_options: HashMap<String, PortOptions> =
+        api::get_public("metadata/ports").await.into_diagnostic()?;
 
     let kinds = kind_options
         .iter()
-        .map(|x| x.kind.clone())
+        .map(|x| x.0.clone())
         .collect::<Vec<String>>();
 
-    let kind = inquire::Select::new("Choose the port kind", kinds)
-        .with_page_size(1)
+    let kind = inquire::Select::new("Choose the port kind", kinds.clone())
+        .with_page_size(kinds.len())
         .prompt()
         .into_diagnostic()?;
 
-    let options: PortOptions = api::get_public(&format!("metadata/ports/{}", kind))
-        .await
-        .into_diagnostic()?;
-
+    let options: PortOptions = kind_options.get(&kind).unwrap().clone();
     let network_options = options.get_networks();
 
     let selected_network = inquire::Select::new("Choose the network", network_options)

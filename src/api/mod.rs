@@ -61,9 +61,9 @@ pub struct NodePortInstance {
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct PortOptions {
-    pub networks: IndexMap<String, String>,
+    pub networks: Vec<String>,
     pub versions: Option<HashMap<String, IndexMap<String, String>>>,
-    pub tiers: IndexMap<String, String>,
+    pub tiers: Vec<String>,
 }
 
 // inquire select requires a vector of strings, so we need to transform the
@@ -71,17 +71,14 @@ pub struct PortOptions {
 impl PortOptions {
     // Network
     pub fn get_networks(&self) -> Vec<String> {
-        self.networks.values().cloned().collect()
+        self.networks.clone()
     }
 
     pub fn find_network_key_by_value(&self, network_value: &str) -> Option<String> {
-        self.networks.iter().find_map(|(key, value)| {
-            if value == network_value {
-                Some(key.clone())
-            } else {
-                None
-            }
-        })
+        self.networks
+            .iter()
+            .find(|&network| network == network_value)
+            .cloned()
     }
 
     // version
@@ -116,19 +113,16 @@ impl PortOptions {
 
     // tiers
     pub fn get_tiers(&self) -> Vec<String> {
-        self.tiers.values().cloned().collect()
+        self.tiers.clone()
     }
 
     // @TODO: find a cleaner way to do this
     pub fn find_tier_key_by_value(&self, formatted_string: &str) -> Option<String> {
         // Check if tier name is included in the formatted string
-        self.tiers.iter().find_map(|(key, _value)| {
-            if formatted_string.contains(key) {
-                Some(key.clone())
-            } else {
-                None
-            }
-        })
+        self.tiers
+            .iter()
+            .find(|&tier| formatted_string.contains(tier))
+            .cloned()
     }
 }
 

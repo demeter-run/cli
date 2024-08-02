@@ -66,13 +66,14 @@ pub fn pretty_print_ports_table(ports: Vec<Resource>) {
         .load_preset(UTF8_FULL)
         .apply_modifier(UTF8_ROUND_CORNERS)
         .set_content_arrangement(ContentArrangement::Dynamic)
-        .set_header(vec!["Instance", "Version", "Tier"]);
+        // .set_header(vec!["Instance", "Version", "Tier"]);
+        .set_header(vec!["Instance", "Raw Spec"]);
 
     for port in ports {
         let instance = format_instance(&port.id, &port.kind);
         // // TODO: must deserialize the port.data to get the version and tier
         // table.add_row(vec![instance, port.version, port.tier]);
-        table.add_row(vec![instance]);
+        table.add_row(vec![instance, port.data]);
     }
 
     println!("{table}");

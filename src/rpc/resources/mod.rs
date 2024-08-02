@@ -61,3 +61,30 @@ pub async fn create(access_token: &str, id: &str, kind: &str) -> miette::Result<
         ..Default::default()
     })
 }
+
+// pub async fn delete(access_token: &str, id: &str, kind: &str) ->
+// miette::Result<()> {     let interceptor =
+// auth::interceptor(access_token.to_owned()).await;
+//
+//     let rpc_url = get_base_url();
+//     let channel = Channel::builder(rpc_url.parse().into_diagnostic()?)
+//         .connect()
+//         .await
+//         .into_diagnostic()?;
+//
+//     let mut client =
+// proto::resource_service_client::ResourceServiceClient::with_interceptor(
+//         channel,
+//         interceptor,
+//     );
+//
+//     let request = tonic::Request::new(proto::DeleteResourceRequest {
+//         project_id: id.to_owned(),
+//         kind: kind.to_owned(),
+//         ..Default::default()
+//     });
+//
+//     client.delete_resource(request).await.into_diagnostic()?;
+//
+//     Ok(())
+// }
