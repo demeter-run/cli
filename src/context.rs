@@ -3,8 +3,6 @@ use std::collections::HashMap;
 use miette::{Context as MietteContext, IntoDiagnostic};
 use serde::{Deserialize, Serialize};
 
-use crate::rpc::get_base_url;
-
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Config {
     pub contexts: HashMap<String, Context>,

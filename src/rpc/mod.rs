@@ -1,7 +1,5 @@
 use std::env;
 
-use dmtri::demeter::ops::v1alpha;
-
 pub mod auth;
 pub mod projects;
 pub mod resources;

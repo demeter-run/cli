@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
 use clap::Parser;
-use dmtri::demeter::ops::v1alpha::Resource;
-use indexmap::IndexMap;
 use miette::IntoDiagnostic;
 
 use crate::{
@@ -48,16 +46,11 @@ pub async fn run(_args: Args, cli: &crate::Cli) -> miette::Result<()> {
 
     // versions could be empty. If so, skip the version selection
     let mut selected_version = String::new();
-    let mut payload_version = String::new();
     let network_versions = options.get_network_versions(&payload_network);
     if !network_versions.is_empty() {
         selected_version = inquire::Select::new("Choose the version", network_versions)
             .prompt()
             .into_diagnostic()?;
-
-        payload_version = options
-            .find_version_label_by_number(&payload_network, &selected_version)
-            .unwrap();
     }
 
     let tier_options = options.get_tiers();
@@ -66,7 +59,7 @@ pub async fn run(_args: Args, cli: &crate::Cli) -> miette::Result<()> {
         .prompt()
         .into_diagnostic()?;
 
-    let payload_tier: String = options.find_tier_key_by_value(&selected_tier).unwrap();
+    let _payload_tier: String = options.find_tier_key_by_value(&selected_tier).unwrap();
 
     println!("You are about to create a new port with the following configuration:");
     println!("Kind: {}", kind);

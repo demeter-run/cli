@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use dmtri::demeter::ops::v1alpha as proto;
-use miette::{Context as _, IntoDiagnostic};
+use miette::IntoDiagnostic;
 
 use crate::rpc;
 

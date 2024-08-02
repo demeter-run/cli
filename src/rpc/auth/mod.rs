@@ -1,5 +1,5 @@
 use tonic::service::Interceptor;
-use tonic::{Request, Status};
+use tonic::Request;
 
 pub async fn interceptor(access_token: String) -> impl Interceptor {
     move |mut req: Request<()>| {

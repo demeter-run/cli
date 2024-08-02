@@ -1,7 +1,6 @@
 use indexmap::IndexMap;
 use reqwest::{Client, Error};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use std::{collections::HashMap, env};
 
 use self::format::format_new_cli_version_available;
@@ -164,37 +163,6 @@ where
 
     check_response_update_header(&resp)?;
     let response = resp.json::<T>().await?;
-    Ok(response)
-}
-
-pub async fn create_port(
-    cli: &crate::Cli,
-    kind: &str,
-    network: &str,
-    version: &str,
-    tier: &str,
-) -> Result<PortInfo, Error> {
-    let (api_key, namespace, base_url) = extract_context_data(cli);
-
-    let url = format!("{}/{}/ports", base_url, namespace);
-
-    let client = Client::new();
-
-    let resp = client
-        .post(url)
-        .header("dmtr-api-key", api_key)
-        .header("agent", build_agent_header())
-        .json(&json!({
-            "kind": kind,
-            "network": network,
-            "version": version,
-            "tier": tier
-        }))
-        .send()
-        .await?;
-
-    check_response_update_header(&resp)?;
-    let response = resp.json::<PortInfo>().await?;
     Ok(response)
 }
 
