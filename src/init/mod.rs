@@ -15,10 +15,6 @@ pub struct Args {
     /// The api key to use as authentication
     #[arg(short, long, global = true, env = "DMTR_API_KEY")]
     api_key: Option<String>,
-
-    /// The access token to use as authentication
-    #[arg(short, long, global = true, env = "DMTR_ACCESS_TOKEN")]
-    access_token: Option<String>,
 }
 
 mod apikey;
@@ -52,7 +48,7 @@ pub async fn import_context(dirs: &crate::dirs::Dirs) -> miette::Result<Context>
 
     let ctx = crate::context::Context {
         project: crate::context::Project::new(&project.id, &project.namespace, Some(project.name)),
-        auth: crate::context::Auth::api_key(&access_token, &api_key),
+        auth: crate::context::Auth::api_key(&api_key),
         cloud: crate::context::Cloud::default(),
         operator: crate::context::Operator::default(),
     };
@@ -91,8 +87,7 @@ pub async fn run(args: Args, dirs: &crate::dirs::Dirs) -> miette::Result<()> {
         let id = args.id.unwrap();
         let namespace = args.namespace.unwrap();
         let api_key = args.api_key.unwrap();
-        let access_token = args.access_token.unwrap();
-        manual::run(&id, &namespace, &api_key, &access_token, dirs).await?;
+        manual::run(&id, &namespace, &api_key, dirs).await?;
         return Ok(());
     };
 

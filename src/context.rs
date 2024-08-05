@@ -18,9 +18,9 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn ephemeral(id: &str, namespace: &str, api_key: &str, access_token: &str) -> Self {
+    pub fn ephemeral(id: &str, namespace: &str, api_key: &str) -> Self {
         let project = crate::context::Project::new(id, namespace, None);
-        let auth = crate::context::Auth::api_key(access_token, api_key);
+        let auth = crate::context::Auth::api_key(api_key);
         let cloud = crate::context::Cloud::default();
         let operator = crate::context::Operator::default();
 
@@ -55,16 +55,14 @@ pub struct Auth {
     pub name: String,
     pub method: String,
     pub token: String,
-    pub access_token: String,
 }
 
 impl Auth {
-    pub fn api_key(access_token: &str, api_key: &str) -> Self {
+    pub fn api_key(api_key: &str) -> Self {
         Self {
             name: "default".to_owned(),
             method: "ApiKey".to_owned(),
             token: api_key.to_owned(),
-            access_token: access_token.to_owned(),
         }
     }
 }
@@ -195,17 +193,14 @@ pub fn infer_context(
     name: Option<&str>,
     namespace: Option<&str>,
     api_key: Option<&str>,
-    access_token: Option<&str>,
     dirs: &crate::dirs::Dirs,
 ) -> miette::Result<Option<Context>> {
-    match (id, name, namespace, api_key, access_token) {
-        (Some(id), None, Some(ns), Some(ak), Some(t)) => {
-            Ok(Some(Context::ephemeral(id, ns, ak, t)))
-        }
-        (None, None, None, None, None) => load_default_context(dirs),
-        (None, Some(context), None, None, None) => load_context_by_name(context, dirs),
-        (None, None, None, Some(_), None) => Err(miette::miette!("missing namespace or id value")),
-        (Some(_), None, Some(_), None, None) => Err(miette::miette!("missing api key value")),
+    match (id, name, namespace, api_key) {
+        (Some(id), None, Some(ns), Some(ak)) => Ok(Some(Context::ephemeral(id, ns, ak))),
+        (None, None, None, None) => load_default_context(dirs),
+        (None, Some(context), None, None) => load_context_by_name(context, dirs),
+        (None, None, None, Some(_)) => Err(miette::miette!("missing namespace or id value")),
+        (Some(_), None, Some(_), None) => Err(miette::miette!("missing api key value")),
         (..) => Err(miette::miette!(
             "conflicting values, specify either a context or namespace"
         )),

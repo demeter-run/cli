@@ -4,7 +4,6 @@ pub async fn run(
     id: &str,
     namespace: &str,
     api_key: &str,
-    access_token: &str,
     dirs: &crate::dirs::Dirs,
 ) -> miette::Result<()> {
     println!("Setting up context for:\n");
@@ -18,7 +17,7 @@ pub async fn run(
         .prompt()
         .into_diagnostic()?;
 
-    let dto = crate::context::Context::ephemeral(id, namespace, api_key, access_token);
+    let dto = crate::context::Context::ephemeral(id, namespace, api_key);
 
     let namespace = dto.project.namespace.clone();
 
