@@ -32,7 +32,7 @@ pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
         return Ok(());
     }
 
-    let (access_token, api_key, project_id, _) = extract_context_data(cli);
+    let (api_key, project_id, _) = extract_context_data(cli);
 
     // parse args
     let (_, id) = get_instance_parts(&args.instance);

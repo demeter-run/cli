@@ -212,11 +212,10 @@ pub fn infer_context(
     }
 }
 
-pub fn extract_context_data(cli: &crate::Cli) -> (String, String, String, String) {
+pub fn extract_context_data(cli: &crate::Cli) -> (String, String, String) {
     let api_key = cli.context.as_ref().unwrap().auth.token.clone();
-    let access_token = cli.context.as_ref().unwrap().auth.access_token.clone();
     let namespace = cli.context.as_ref().unwrap().project.namespace.clone();
     let id = cli.context.as_ref().unwrap().project.id.clone();
 
-    (access_token, api_key, id, namespace)
+    (api_key, id, namespace)
 }

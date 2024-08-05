@@ -4,8 +4,8 @@ use tonic::transport::Channel;
 
 use crate::rpc::{auth, get_base_url};
 
-pub async fn find(access_token: &str, id: &str) -> miette::Result<Vec<proto::Resource>> {
-    let credential = auth::Credential::Auth0(access_token.to_owned());
+pub async fn find(api_key: &str, project_id: &str) -> miette::Result<Vec<proto::Resource>> {
+    let credential = auth::Credential::Secret((project_id.to_owned(), api_key.to_owned()));
     let interceptor = auth::interceptor(credential).await;
 
     let rpc_url = get_base_url();
@@ -20,7 +20,7 @@ pub async fn find(access_token: &str, id: &str) -> miette::Result<Vec<proto::Res
     );
 
     let request = tonic::Request::new(proto::FetchResourcesRequest {
-        project_id: id.to_owned(),
+        project_id: project_id.to_owned(),
         ..Default::default()
     });
 
@@ -30,8 +30,12 @@ pub async fn find(access_token: &str, id: &str) -> miette::Result<Vec<proto::Res
     Ok(records)
 }
 
-pub async fn create(access_token: &str, id: &str, kind: &str) -> miette::Result<proto::Resource> {
-    let credential = auth::Credential::Auth0(access_token.to_owned());
+pub async fn create(
+    access_token: &str,
+    project_id: &str,
+    kind: &str,
+) -> miette::Result<proto::Resource> {
+    let credential = auth::Credential::Secret((project_id.to_owned(), access_token.to_owned()));
     let interceptor = auth::interceptor(credential).await;
 
     let rpc_url = get_base_url();
@@ -46,7 +50,7 @@ pub async fn create(access_token: &str, id: &str, kind: &str) -> miette::Result<
     );
 
     let request = tonic::Request::new(proto::CreateResourceRequest {
-        project_id: id.to_owned(),
+        project_id: project_id.to_owned(),
         kind: kind.to_owned(),
         ..Default::default()
     });

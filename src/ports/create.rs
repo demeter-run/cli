@@ -18,7 +18,7 @@ pub struct Args {
 }
 
 pub async fn run(_args: Args, cli: &crate::Cli) -> miette::Result<()> {
-    let (access_token, _, id, _) = extract_context_data(cli);
+    let (api_key, id, _) = extract_context_data(cli);
 
     let kind_options: HashMap<String, PortOptions> =
         api::get_public("metadata/ports").await.into_diagnostic()?;
@@ -77,7 +77,7 @@ pub async fn run(_args: Args, cli: &crate::Cli) -> miette::Result<()> {
         return Ok(());
     }
 
-    let result = rpc::resources::create(&access_token, &id, &kind).await?;
+    let result = rpc::resources::create(&api_key, &id, &kind).await?;
 
     // pretty_print_port(result);
     pretty_print_ports_table(Vec::from([result]));
