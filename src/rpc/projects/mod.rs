@@ -10,7 +10,8 @@ use crate::{
 use super::get_base_url;
 
 pub async fn find_all(access_token: &str) -> miette::Result<Vec<proto::Project>> {
-    let interceptor = auth::interceptor(access_token.to_owned()).await;
+    let credential = auth::Credential::Auth0(access_token.to_owned());
+    let interceptor = auth::interceptor(credential).await;
 
     let rpc_url = get_base_url();
     let channel = Channel::builder(rpc_url.parse().into_diagnostic()?)
@@ -29,7 +30,8 @@ pub async fn find_all(access_token: &str) -> miette::Result<Vec<proto::Project>>
 }
 
 pub async fn create_project(access_token: &str, name: &str) -> miette::Result<ProjectRef> {
-    let interceptor = auth::interceptor(access_token.to_owned()).await;
+    let credential = auth::Credential::Auth0(access_token.to_owned());
+    let interceptor = auth::interceptor(credential).await;
 
     let rpc_url = get_base_url();
     let channel = Channel::builder(rpc_url.parse().into_diagnostic()?)
@@ -60,7 +62,8 @@ pub async fn create_secret(
     project_id: &str,
     name: &str,
 ) -> miette::Result<String> {
-    let interceptor = auth::interceptor(access_token.to_owned()).await;
+    let credential = auth::Credential::Auth0(access_token.to_owned());
+    let interceptor = auth::interceptor(credential).await;
 
     let rpc_url = get_base_url();
     let channel = Channel::builder(rpc_url.parse().into_diagnostic()?)

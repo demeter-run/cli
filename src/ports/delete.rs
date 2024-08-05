@@ -32,19 +32,14 @@ pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
         return Ok(());
     }
 
-    let (access_token, _, _, _) = extract_context_data(cli);
+    let (access_token, api_key, project_id, _) = extract_context_data(cli);
 
     // parse args
-    let (kind, id) = get_instance_parts(&args.instance);
-    println!("Deleting port: {}", args.instance);
-    println!("Kind: {}", kind);
-    println!("ID: {}", id);
+    let (_, id) = get_instance_parts(&args.instance);
 
-    rpc::resources::delete(&access_token, &id, &kind)
+    rpc::resources::delete(&api_key, &project_id, &id)
         .await
-        .unwrap(); // Use the imported `get` function
-                   // delete_port(cli, &kind, &id).await.unwrap(); // Use the imported `get`
-                   // function
+        .unwrap();
 
     println!("Successfully deleted port: {}", args.instance);
     Ok(())

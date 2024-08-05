@@ -5,7 +5,8 @@ use tonic::transport::Channel;
 use crate::rpc::{auth, get_base_url};
 
 pub async fn find(access_token: &str, id: &str) -> miette::Result<Vec<proto::Resource>> {
-    let interceptor = auth::interceptor(access_token.to_owned()).await;
+    let credential = auth::Credential::Auth0(access_token.to_owned());
+    let interceptor = auth::interceptor(credential).await;
 
     let rpc_url = get_base_url();
     let channel = Channel::builder(rpc_url.parse().into_diagnostic()?)
@@ -30,7 +31,8 @@ pub async fn find(access_token: &str, id: &str) -> miette::Result<Vec<proto::Res
 }
 
 pub async fn create(access_token: &str, id: &str, kind: &str) -> miette::Result<proto::Resource> {
-    let interceptor = auth::interceptor(access_token.to_owned()).await;
+    let credential = auth::Credential::Auth0(access_token.to_owned());
+    let interceptor = auth::interceptor(credential).await;
 
     let rpc_url = get_base_url();
     let channel = Channel::builder(rpc_url.parse().into_diagnostic()?)
@@ -62,8 +64,9 @@ pub async fn create(access_token: &str, id: &str, kind: &str) -> miette::Result<
     })
 }
 
-pub async fn delete(access_token: &str, id: &str, kind: &str) -> miette::Result<()> {
-    let interceptor = auth::interceptor(access_token.to_owned()).await;
+pub async fn delete(access_token: &str, project_id: &str, id: &str) -> miette::Result<()> {
+    let credential = auth::Credential::Secret((project_id.to_owned(), access_token.to_owned()));
+    let interceptor = auth::interceptor(credential).await;
 
     let rpc_url = get_base_url();
     let channel = Channel::builder(rpc_url.parse().into_diagnostic()?)
@@ -77,8 +80,8 @@ pub async fn delete(access_token: &str, id: &str, kind: &str) -> miette::Result<
     );
 
     let request = tonic::Request::new(proto::DeleteResourceRequest {
-        project_id: id.to_owned(),
-        resource_id: kind.to_owned(),
+        project_id: project_id.to_owned(),
+        resource_id: id.to_owned(),
     });
 
     client.delete_resource(request).await.into_diagnostic()?;
