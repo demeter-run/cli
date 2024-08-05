@@ -1,7 +1,7 @@
 use clap::Parser;
 use miette::IntoDiagnostic;
 
-use crate::api::delete_port;
+use crate::{context::extract_context_data, rpc};
 
 #[derive(Parser)]
 pub struct Args {
@@ -32,11 +32,19 @@ pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
         return Ok(());
     }
 
+    let (access_token, _, _, _) = extract_context_data(cli);
+
     // parse args
     let (kind, id) = get_instance_parts(&args.instance);
+    println!("Deleting port: {}", args.instance);
+    println!("Kind: {}", kind);
+    println!("ID: {}", id);
 
-    // rpc::resources::delete()
-    delete_port(cli, &kind, &id).await.unwrap(); // Use the imported `get` function
+    rpc::resources::delete(&access_token, &id, &kind)
+        .await
+        .unwrap(); // Use the imported `get` function
+                   // delete_port(cli, &kind, &id).await.unwrap(); // Use the imported `get`
+                   // function
 
     println!("Successfully deleted port: {}", args.instance);
     Ok(())

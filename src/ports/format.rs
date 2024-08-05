@@ -73,7 +73,7 @@ pub fn pretty_print_ports_table(ports: Vec<Resource>) {
         let instance = format_instance(&port.id, &port.kind);
         // // TODO: must deserialize the port.data to get the version and tier
         // table.add_row(vec![instance, port.version, port.tier]);
-        table.add_row(vec![instance, port.data]);
+        table.add_row(vec![instance, port.spec]);
     }
 
     println!("{table}");

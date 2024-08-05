@@ -62,7 +62,8 @@ pub struct NodePortInstance {
 pub struct PortOptions {
     pub networks: Vec<String>,
     pub versions: Option<HashMap<String, IndexMap<String, String>>>,
-    pub tiers: Vec<String>,
+    pub tiers: IndexMap<String, String>,
+    pub kind: String,
 }
 
 // inquire select requires a vector of strings, so we need to transform the
@@ -112,16 +113,19 @@ impl PortOptions {
 
     // tiers
     pub fn get_tiers(&self) -> Vec<String> {
-        self.tiers.clone()
+        self.tiers.values().cloned().collect()
     }
 
     // @TODO: find a cleaner way to do this
     pub fn find_tier_key_by_value(&self, formatted_string: &str) -> Option<String> {
         // Check if tier name is included in the formatted string
-        self.tiers
-            .iter()
-            .find(|&tier| formatted_string.contains(tier))
-            .cloned()
+        self.tiers.iter().find_map(|(key, _value)| {
+            if formatted_string.contains(key) {
+                Some(key.clone())
+            } else {
+                None
+            }
+        })
     }
 }
 
