@@ -170,23 +170,6 @@ where
     Ok(response)
 }
 
-pub async fn delete_port(cli: &crate::Cli, kind: &str, id: &str) -> Result<(), Error> {
-    let (api_key, namespace, base_url) = extract_context_data(cli);
-
-    let url = format!("{}/{}/ports/{}/{}", base_url, namespace, kind, id);
-
-    let client = Client::new();
-    let _resp = client
-        .delete(url)
-        .header("dmtr-api-key", api_key)
-        .header("agent", build_agent_header())
-        .send()
-        .await?;
-
-    check_response_update_header(&_resp)?;
-    Ok(())
-}
-
 fn extract_context_data(cli: &crate::Cli) -> (String, String, String) {
     let api_key = cli.context.as_ref().unwrap().auth.token.clone();
     let namespace = cli.context.as_ref().unwrap().project.namespace.clone();
