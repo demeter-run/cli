@@ -23,6 +23,18 @@ pub struct PortInfo {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct PortInfoList {
+    pub id: Option<String>,
+    pub kind: Option<String>,
+    pub key: Option<String>,
+    pub name: Option<String>,
+    pub network: Option<String>,
+    pub tier: Option<String>,
+    pub version: Option<String>,
+    pub instance: Option<Instance>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(untagged)] // Allows for different shapes of the "instance" object
 pub enum Instance {
     Postgres(PostgresPortInstance),

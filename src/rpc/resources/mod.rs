@@ -34,6 +34,7 @@ pub async fn create(
     access_token: &str,
     project_id: &str,
     kind: &str,
+    spec: &str,
 ) -> miette::Result<proto::Resource> {
     let credential = auth::Credential::Secret((project_id.to_owned(), access_token.to_owned()));
     let interceptor = auth::interceptor(credential).await;
@@ -52,7 +53,7 @@ pub async fn create(
     let request = tonic::Request::new(proto::CreateResourceRequest {
         project_id: project_id.to_owned(),
         kind: kind.to_owned(),
-        ..Default::default()
+        spec: spec.to_owned(),
     });
 
     let response = client.create_resource(request).await.into_diagnostic()?;

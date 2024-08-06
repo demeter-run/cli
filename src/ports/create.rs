@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use clap::Parser;
 use miette::IntoDiagnostic;
+use serde_json::json;
 
 use crate::{
     api::{self, PortOptions},
@@ -58,7 +59,7 @@ pub async fn run(_args: Args, cli: &crate::Cli) -> miette::Result<()> {
         .prompt()
         .into_diagnostic()?;
 
-    let _payload_tier: String = option.find_tier_key_by_value(&selected_tier).unwrap();
+    let payload_tier: String = option.find_tier_key_by_value(&selected_tier).unwrap();
 
     println!("You are about to create a new port with the following configuration:");
     println!("Kind: {}", kind);
@@ -77,7 +78,13 @@ pub async fn run(_args: Args, cli: &crate::Cli) -> miette::Result<()> {
         return Ok(());
     }
 
-    let result = rpc::resources::create(&api_key, &id, &kind).await?;
+    let spec = json!({
+        "network": payload_network,
+        "version": selected_version,
+        "tier": payload_tier,
+    });
+
+    let result = rpc::resources::create(&api_key, &id, &kind, &spec.to_string()).await?;
 
     // pretty_print_port(result);
     pretty_print_ports_table(Vec::from([result]));
