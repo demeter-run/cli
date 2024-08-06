@@ -13,7 +13,7 @@ pub fn pretty_print_port(port: PortInfo) {
     // TODO: for rpc calls we need to deserialize the port.data to get the version
     // and tier?
     match &port.instance {
-        Instance::PostgresPort(instance) => {
+        Instance::Postgres(instance) => {
             lines.push(format!("Network: {}", port.network));
             lines.push(format!("Hostname: {}", instance.hostname));
             lines.push(format!("Database: {}", instance.database));
@@ -23,7 +23,7 @@ pub fn pretty_print_port(port: PortInfo) {
             lines.push(format!("Connection String: {}", instance.connection_string));
             lines.push(format!("Tier: {}", port.tier));
         }
-        Instance::HttpPort(instance) => {
+        Instance::Http(instance) => {
             lines.push(format!("Network: {}", port.network));
             lines.push(format!("API Key: {}", instance.api_key));
             lines.push(format!("Endpoint: {}", instance.endpoint));
@@ -33,7 +33,7 @@ pub fn pretty_print_port(port: PortInfo) {
             ));
             lines.push(format!("Tier: {}", port.tier));
         }
-        Instance::NodePort(instance) => {
+        Instance::Node(instance) => {
             lines.push(format!("Network: {}", port.network));
             lines.push(format!(
                 "Authenticated Endpoint: {}",

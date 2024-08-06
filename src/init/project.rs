@@ -47,7 +47,7 @@ async fn new_project(access_token: &str) -> miette::Result<ProjectRef> {
 }
 
 pub async fn define_project(access_token: &str) -> miette::Result<ProjectRef> {
-    let projects: Vec<proto::Project> = rpc::projects::find_all(access_token).await?;
+    let projects: Vec<proto::Project> = rpc::projects::find(access_token).await?;
 
     if projects.is_empty() {
         return new_project(access_token).await;

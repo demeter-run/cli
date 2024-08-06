@@ -246,7 +246,7 @@ pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
     let port_info = define_port(args.port, cli).await?;
 
     let hostname = match &port_info.instance {
-        Instance::NodePort(x) => &x.authenticated_endpoint,
+        Instance::Node(x) => &x.authenticated_endpoint,
         _ => bail!("invalid port instance, only kind cardano-node support tunnels"),
     };
 

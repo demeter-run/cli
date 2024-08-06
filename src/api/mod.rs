@@ -25,9 +25,9 @@ pub struct PortInfo {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(untagged)] // Allows for different shapes of the "instance" object
 pub enum Instance {
-    PostgresPort(PostgresPortInstance),
-    HttpPort(HttpPortInstance),
-    NodePort(NodePortInstance),
+    Postgres(PostgresPortInstance),
+    Http(HttpPortInstance),
+    Node(NodePortInstance),
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]

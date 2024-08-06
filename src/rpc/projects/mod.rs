@@ -9,7 +9,7 @@ use crate::{
 
 use super::get_base_url;
 
-pub async fn find_all(access_token: &str) -> miette::Result<Vec<proto::Project>> {
+pub async fn find(access_token: &str) -> miette::Result<Vec<proto::Project>> {
     let credential = auth::Credential::Auth0(access_token.to_owned());
     let interceptor = auth::interceptor(credential).await;
 
