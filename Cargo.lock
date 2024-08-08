@@ -555,7 +555,6 @@ name = "dmtrctl"
 version = "1.4.1"
 dependencies = [
  "base64 0.22.1",
- "chrono",
  "clap",
  "colored",
  "comfy-table",
@@ -586,6 +585,7 @@ dependencies = [
 [[package]]
 name = "dmtri"
 version = "0.1.0"
+source = "git+https://github.com/demeter-run/specs.git#deab7fbdf3ab2104bb3ce5b407e068b0602b378b"
 dependencies = [
  "bytes",
  "pbjson",
