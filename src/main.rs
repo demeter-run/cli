@@ -11,6 +11,7 @@ mod init;
 mod pages;
 mod ports;
 mod rpc;
+mod utils;
 
 extern crate core;
 

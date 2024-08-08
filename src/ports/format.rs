@@ -1,4 +1,4 @@
-use crate::api::{Instance, PortInfo, PortInfoList};
+use crate::api::{Instance, PortInfo};
 use colored::*;
 use comfy_table::modifiers::UTF8_ROUND_CORNERS;
 use comfy_table::presets::UTF8_FULL;
@@ -66,22 +66,20 @@ pub fn pretty_print_ports_table(ports: Vec<Resource>) {
         .load_preset(UTF8_FULL)
         .apply_modifier(UTF8_ROUND_CORNERS)
         .set_content_arrangement(ContentArrangement::Dynamic)
-        .set_header(vec!["Instance", "Version", "Tier"]);
+        .set_header(vec!["Id", "Kind", "Spec", "Created At"]);
 
     for port in ports {
-        let instance = format_instance(&port.id, &port.kind);
-        let spec: PortInfoList = serde_json::from_str(&port.spec).unwrap();
-        println!("{:?}", spec);
         table.add_row(vec![
-            instance,
-            spec.version.unwrap_or_default(),
-            spec.tier.unwrap_or_default(),
+            port.id.clone(),
+            port.kind.clone(),
+            port.spec.clone(),
+            port.created_at.clone(),
         ]);
     }
 
     println!("{table}");
 }
 
-fn format_instance(id: &str, kind: &str) -> String {
-    format!("{}/{}", kind, id)
-}
+//fn format_instance(id: &str, kind: &str) -> String {
+//    format!("{}/{}", kind, id)
+//}
