@@ -141,25 +141,6 @@ impl PortOptions {
     }
 }
 
-pub async fn get_public<T>(path: &str) -> Result<T, Error>
-where
-    T: for<'de> Deserialize<'de>,
-{
-    let url = format!("{}/mgmt/{}", get_base_url(), path);
-
-    let client = Client::new();
-
-    let resp = client
-        .get(url)
-        .header("agent", build_agent_header())
-        .send()
-        .await?;
-
-    check_response_update_header(&resp)?;
-    let response = resp.json::<T>().await?;
-    Ok(response)
-}
-
 pub async fn get<T>(cli: &crate::Cli, path: &str) -> Result<T, Error>
 where
     T: for<'de> Deserialize<'de>,
