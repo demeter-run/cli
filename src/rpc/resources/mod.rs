@@ -30,6 +30,40 @@ pub async fn find(api_key: &str, project_id: &str) -> miette::Result<Vec<proto::
     Ok(records)
 }
 
+pub async fn find_by_id(
+    access_token: &str,
+    project_id: &str,
+    resource_id: &str,
+) -> miette::Result<Vec<proto::Resource>> {
+    let credential = auth::Credential::Secret((project_id.to_owned(), access_token.to_owned()));
+    let interceptor = auth::interceptor(credential).await;
+
+    let rpc_url = get_base_url();
+    let channel = Channel::builder(rpc_url.parse().into_diagnostic()?)
+        .connect()
+        .await
+        .into_diagnostic()?;
+
+    let mut client = proto::resource_service_client::ResourceServiceClient::with_interceptor(
+        channel,
+        interceptor,
+    );
+
+    let request = tonic::Request::new(proto::FetchResourcesByIdRequest {
+        project_id: project_id.to_owned(),
+        resource_id: resource_id.to_owned(),
+    });
+
+    let response = client
+        .fetch_resources_by_id(request)
+        .await
+        .into_diagnostic()?;
+
+    let resource = response.into_inner().records;
+
+    Ok(resource)
+}
+
 pub async fn create(
     access_token: &str,
     project_id: &str,

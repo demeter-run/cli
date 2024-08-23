@@ -16,6 +16,7 @@ pub enum KnownField {
     Network,
     OperatorVersion,
 }
+
 impl FromStr for KnownField {
     type Err = miette::Error;
 
