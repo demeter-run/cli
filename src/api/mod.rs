@@ -1,5 +1,5 @@
 use indexmap::IndexMap;
-use reqwest::{Client, Error};
+use reqwest::Error;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, env};
 
@@ -24,11 +24,13 @@ pub struct PortInfo {
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct PortInfoList {
+    pub auth_token: Option<String>,
     pub id: Option<String>,
     pub kind: Option<String>,
     pub key: Option<String>,
     pub name: Option<String>,
     pub network: Option<String>,
+    pub port: Option<String>,
     pub tier: Option<String>,
     pub version: Option<String>,
     pub instance: Option<Instance>,
@@ -141,36 +143,6 @@ impl PortOptions {
     }
 }
 
-pub async fn get<T>(cli: &crate::Cli, path: &str) -> Result<T, Error>
-where
-    T: for<'de> Deserialize<'de>,
-{
-    let (api_key, namespace, base_url) = extract_context_data(cli);
-
-    let url = format!("{}/{}/{}", base_url, namespace, path);
-
-    let client = Client::new();
-
-    let resp = client
-        .get(url)
-        .header("dmtr-api-key", api_key)
-        .header("agent", build_agent_header())
-        .send()
-        .await?;
-
-    check_response_update_header(&resp)?;
-    let response = resp.json::<T>().await?;
-    Ok(response)
-}
-
-fn extract_context_data(cli: &crate::Cli) -> (String, String, String) {
-    let api_key = cli.context.as_ref().unwrap().auth.token.clone();
-    let namespace = cli.context.as_ref().unwrap().project.namespace.clone();
-    let base_url = format!("{}/mgmt/project", get_base_url());
-
-    (api_key, namespace, base_url)
-}
-
 pub fn check_response_update_header(resp: &reqwest::Response) -> Result<&reqwest::Response, Error> {
     let headers = resp.headers();
     let version = headers.get("dmtr-cli-update");
@@ -185,9 +157,4 @@ pub fn check_response_update_header(resp: &reqwest::Response) -> Result<&reqwest
 
 pub fn build_agent_header() -> String {
     format!("dmtr-cli/{}", VERSION)
-}
-
-fn get_base_url() -> String {
-    let api_base_url = "https://console.us1.demeter.run".into();
-    env::var("API_BASE_URL").unwrap_or(api_base_url)
 }

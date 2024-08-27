@@ -1,6 +1,7 @@
-use crate::api::{self, Instance, PortInfo};
+use crate::{api::PortInfoList, context::extract_context_data, rpc};
 use clap::Parser;
 use colored::Colorize;
+use dmtri::demeter::ops::v1alpha::Resource;
 use miette::{bail, Context, IntoDiagnostic};
 use std::{
     path::PathBuf,
@@ -106,13 +107,15 @@ async fn connect_remote<'a>(
 
 fn define_socket_path(
     explicit: Option<PathBuf>,
-    port: &PortInfo,
+    port: &PortInfoList,
     dirs: &crate::dirs::Dirs,
     ctx: &crate::context::Context,
 ) -> miette::Result<PathBuf> {
-    let default = dirs
-        .ensure_tmp_dir(&ctx.project.namespace)?
-        .join(format!("{}-{}.socket", port.network, port.version));
+    let default = dirs.ensure_tmp_dir(&ctx.project.namespace)?.join(format!(
+        "{}-{}.socket",
+        port.network.as_ref().unwrap(),
+        port.port.as_ref().unwrap()
+    ));
 
     let path = explicit.to_owned().unwrap_or(default);
 
@@ -151,15 +154,11 @@ async fn spawn_new_connection(
     Ok(())
 }
 
-struct NodeOption(PortInfo);
+struct NodeOption(Resource);
 
 impl std::fmt::Display for NodeOption {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}/{} ({}, {})",
-            self.0.kind, self.0.id, self.0.network, self.0.version
-        )
+        write!(f, "{}/{} ({})", self.0.kind, self.0.id, self.0.spec)
     }
 }
 
@@ -168,17 +167,34 @@ fn get_instance_parts(instance: &str) -> (String, String) {
     (parts[0].to_string(), parts[1].to_string())
 }
 
-async fn define_port(explicit: Option<String>, cli: &crate::Cli) -> miette::Result<PortInfo> {
-    let available: Vec<_> = api::get::<Vec<PortInfo>>(cli, &format!("ports/{}", CARDANO_NODE_KIND))
-        .await
-        .into_diagnostic()?
+async fn define_port(explicit: Option<String>, cli: &crate::Cli) -> miette::Result<Resource> {
+    let (api_key, id, _) = extract_context_data(cli);
+    let response = rpc::resources::find(&api_key, &id).await?;
+    println!("{:?}", response);
+    if response.is_empty() {
+        bail!("you don't have any cardano-node ports, run dmtrctl ports create");
+    }
+
+    let available: Vec<_> = response
         .into_iter()
+        .filter(|p| p.kind == CARDANO_NODE_KIND)
         .map(NodeOption)
         .collect();
 
     if available.is_empty() {
         bail!("you don't have any cardano-node ports, run dmtrctl ports create");
     }
+
+    // let available: Vec<_> = api::get::<Vec<PortInfo>>(cli, &format!("ports/{}",
+    // CARDANO_NODE_KIND))     .await
+    //     .into_diagnostic()?
+    //     .into_iter()
+    //     .map(NodeOption)
+    //     .collect();
+    //
+    // if available.is_empty() {
+    //     bail!("you don't have any cardano-node ports, run dmtrctl ports create");
+    // }
 
     if let Some(explicit) = explicit {
         let (kind, id) = get_instance_parts(&explicit);
@@ -245,12 +261,18 @@ pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
 
     let port_info = define_port(args.port, cli).await?;
 
-    let hostname = match &port_info.instance {
-        Instance::Node(x) => &x.authenticated_endpoint,
-        _ => bail!("invalid port instance, only kind cardano-node support tunnels"),
-    };
+    let spec = serde_json::from_str::<PortInfoList>(&port_info.spec)
+        .into_diagnostic()
+        .context("error parsing port spec")?;
 
-    let socket_path = define_socket_path(args.socket, &port_info, &cli.dirs, ctx)
+    let auth_token = spec.auth_token.as_ref().unwrap();
+    let hostname = format!("{}.cnode-m1.demeter.run", auth_token).to_string();
+    // let hostname = match &port_info.instance {
+    //     Instance::Node(x) => &x.authenticated_endpoint,
+    //     _ => bail!("invalid port instance, only kind cardano-node support
+    // tunnels"), };
+
+    let socket_path = define_socket_path(args.socket, &spec, &cli.dirs, ctx)
         .context("error defining unix socket path")?;
 
     debug!(path = ?socket_path, "socket path defined");
@@ -278,7 +300,7 @@ pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
         tokio::select! {
             result = server.accept() => {
                 let (local, _) = result.into_diagnostic()?;
-                spawn_new_connection(local, hostname, DEFAULT_REMOTE_PORT, counter.clone()).await?;
+                spawn_new_connection(local, &hostname, DEFAULT_REMOTE_PORT, counter.clone()).await?;
             }
             _ = tokio::signal::ctrl_c() => {
                 break;
