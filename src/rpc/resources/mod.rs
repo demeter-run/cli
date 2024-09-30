@@ -50,8 +50,7 @@ pub async fn find_by_id(
     );
 
     let request = tonic::Request::new(proto::FetchResourcesByIdRequest {
-        project_id: project_id.to_owned(),
-        resource_id: resource_id.to_owned(),
+        id: resource_id.into(),
     });
 
     let response = client
@@ -118,10 +117,7 @@ pub async fn delete(access_token: &str, project_id: &str, id: &str) -> miette::R
         interceptor,
     );
 
-    let request = tonic::Request::new(proto::DeleteResourceRequest {
-        project_id: project_id.to_owned(),
-        resource_id: id.to_owned(),
-    });
+    let request = tonic::Request::new(proto::DeleteResourceRequest { id: id.into() });
 
     client.delete_resource(request).await.into_diagnostic()?;
 
