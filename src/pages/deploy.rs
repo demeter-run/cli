@@ -44,7 +44,7 @@ pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
 
     let source = args.source.unwrap_or_else(|| Path::new("./dist").into());
     let name = define_image_name(
-        &ctx.namespace.name,
+        &ctx.project.namespace,
         args.channel.as_deref(),
         args.commit_hash.as_deref(),
     )?;

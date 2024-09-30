@@ -1,8 +1,8 @@
 use clap::Parser;
 
-use crate::api::{get, PortInfo};
+use crate::{context::extract_context_data, rpc};
 
-use super::format::pretty_print_port;
+use super::format::pretty_print_ports_table;
 
 #[derive(Parser)]
 pub struct Args {
@@ -21,18 +21,17 @@ pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
         .as_ref()
         .ok_or(miette::miette!("can't list ports without a context"))?;
 
-    // parse args
-    let (kind, id) = get_instance_parts(&args.instance);
+    let (_, resource_id) = get_instance_parts(&args.instance);
+    let (api_key, project_id, _) = extract_context_data(cli);
+    let response = rpc::resources::find_by_id(&api_key, &project_id, &resource_id).await?;
 
-    let response: PortInfo = get(cli, format!("ports/{}/{}", kind, id).as_str())
-        .await
-        .unwrap(); // Use the imported `get` function
+    if response.is_empty() {
+        println!("No ports found");
+        return Ok(());
+    }
 
-    // if !response {
-    //     println!("No ports found for instance: {}", args.instance);
-    //     return Ok(());
-    // }
-
-    pretty_print_port(response);
+    // TODO: replace this method with the one bellow to show the port details
+    // pretty_print_port(resource);
+    pretty_print_ports_table(response);
     Ok(())
 }

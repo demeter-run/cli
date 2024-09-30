@@ -3,29 +3,29 @@ use std::collections::HashMap;
 use miette::{Context as MietteContext, IntoDiagnostic};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Default)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Config {
     pub contexts: HashMap<String, Context>,
     pub default_context: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Context {
-    pub namespace: Namespace,
+    pub project: Project,
     pub cloud: Cloud,
     pub operator: Operator,
     pub auth: Auth,
 }
 
 impl Context {
-    pub fn ephemeral(namespace: &str, api_key: &str) -> Self {
-        let namespace = crate::core::Namespace::new(namespace, None);
-        let auth = crate::core::Auth::api_key(api_key);
-        let cloud = crate::core::Cloud::default();
-        let operator = crate::core::Operator::default();
+    pub fn ephemeral(id: &str, namespace: &str, api_key: &str) -> Self {
+        let project = crate::context::Project::new(id, namespace, None);
+        let auth = crate::context::Auth::api_key(api_key);
+        let cloud = crate::context::Cloud::default();
+        let operator = crate::context::Operator::default();
 
         Self {
-            namespace,
+            project,
             auth,
             cloud,
             operator,
@@ -33,22 +33,24 @@ impl Context {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
-pub struct Namespace {
-    pub name: String,
-    pub caption: Option<String>,
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Project {
+    pub id: String,
+    pub name: Option<String>,
+    pub namespace: String,
 }
 
-impl Namespace {
-    pub fn new(name: &str, caption: Option<String>) -> Self {
+impl Project {
+    pub fn new(id: &str, namespace: &str, name: Option<String>) -> Self {
         Self {
-            name: name.to_owned(),
-            caption,
+            id: id.to_owned(),
+            namespace: namespace.to_owned(),
+            name,
         }
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Auth {
     pub name: String,
     pub method: String,
@@ -56,18 +58,18 @@ pub struct Auth {
 }
 
 impl Auth {
-    pub fn api_key(token: &str) -> Self {
+    pub fn api_key(api_key: &str) -> Self {
         Self {
             name: "default".to_owned(),
             method: "ApiKey".to_owned(),
-            token: token.to_owned(),
+            token: api_key.to_owned(),
         }
     }
 }
 
 const DEFAULT_CLOUD: &str = "cloud0.txpipe.io";
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Cloud {
     pub name: String,
 }
@@ -80,7 +82,7 @@ impl Default for Cloud {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Operator {
     pub name: String,
     pub entrypoint: String,
@@ -187,19 +189,28 @@ pub fn load_default_context(dirs: &crate::dirs::Dirs) -> miette::Result<Option<C
     Ok(None)
 }
 pub fn infer_context(
+    id: Option<&str>,
     name: Option<&str>,
     namespace: Option<&str>,
     api_key: Option<&str>,
     dirs: &crate::dirs::Dirs,
 ) -> miette::Result<Option<Context>> {
-    match (name, namespace, api_key) {
-        (None, Some(ns), Some(ak)) => Ok(Some(Context::ephemeral(ns, ak))),
-        (None, None, None) => load_default_context(dirs),
-        (Some(context), None, None) => load_context_by_name(context, dirs),
-        (None, None, Some(_)) => Err(miette::miette!("missing namespace value")),
-        (None, Some(_), None) => Err(miette::miette!("missing api key value")),
+    match (id, name, namespace, api_key) {
+        (Some(id), None, Some(ns), Some(ak)) => Ok(Some(Context::ephemeral(id, ns, ak))),
+        (None, None, None, None) => load_default_context(dirs),
+        (None, Some(context), None, None) => load_context_by_name(context, dirs),
+        (None, None, None, Some(_)) => Err(miette::miette!("missing namespace or id value")),
+        (Some(_), None, Some(_), None) => Err(miette::miette!("missing api key value")),
         (..) => Err(miette::miette!(
             "conflicting values, specify either a context or namespace"
         )),
     }
+}
+
+pub fn extract_context_data(cli: &crate::Cli) -> (String, String, String) {
+    let api_key = cli.context.as_ref().unwrap().auth.token.clone();
+    let namespace = cli.context.as_ref().unwrap().project.namespace.clone();
+    let id = cli.context.as_ref().unwrap().project.id.clone();
+
+    (api_key, id, namespace)
 }

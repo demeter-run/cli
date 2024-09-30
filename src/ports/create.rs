@@ -2,69 +2,65 @@ use clap::Parser;
 use miette::IntoDiagnostic;
 
 use crate::{
-    api::{self, PortOptions},
-    ports::format::pretty_print_port,
+    context::extract_context_data,
+    rpc,
+    utils::{get_spec_from_crd, KnownField},
 };
 
 #[derive(Parser)]
-pub struct Args {
-    // /// specify advance values during init
-    // #[arg(action)]
-    // advanced: bool,
-}
+pub struct Args {}
 
 pub async fn run(_args: Args, cli: &crate::Cli) -> miette::Result<()> {
-    let kind_options: Vec<String> = api::get(cli, "ports?listOnly=true")
-        .await
-        .into_diagnostic()?;
+    let (api_key, id, _) = extract_context_data(cli);
 
-    let kind = inquire::Select::new("Choose the port kind", kind_options.clone())
-        .with_page_size(kind_options.len())
+    let crds = rpc::metadata::find().await?;
+
+    let kinds = crds
+        .iter()
+        .map(|x| x.spec.names.kind.clone())
+        .collect::<Vec<String>>();
+
+    let kind = inquire::Select::new("Choose the port kind", kinds.clone())
+        .with_page_size(kinds.len())
         .prompt()
         .into_diagnostic()?;
 
-    let options: PortOptions = api::get_public(&format!("metadata/ports/{}", kind))
-        .await
-        .into_diagnostic()?;
+    let crd_selected = crds.iter().find(|crd| crd.spec.names.kind == kind).unwrap();
+    let spec = get_spec_from_crd(crd_selected).unwrap();
 
-    let network_options = options.get_networks();
+    let mut payload = serde_json::Map::default();
 
-    let selected_network = inquire::Select::new("Choose the network", network_options)
-        .prompt()
-        .into_diagnostic()?;
+    for (field, value) in spec {
+        let is_nullable = value.nullable.unwrap_or_default();
 
-    let payload_network = options
-        .find_network_key_by_value(&selected_network)
-        .unwrap();
+        if !is_nullable {
+            if let Ok(known_field) = field.parse::<KnownField>() {
+                match known_field {
+                    KnownField::Network => {
+                        let network_options = vec!["mainnet", "preprod", "preview"];
 
-    // versions could be empty. If so, skip the version selection
-    let mut selected_version = String::new();
-    let mut payload_version = String::new();
-    let network_versions = options.get_network_versions(&payload_network);
-    if !network_versions.is_empty() {
-        selected_version = inquire::Select::new("Choose the version", network_versions)
-            .prompt()
-            .into_diagnostic()?;
-        payload_version = options
-            .find_version_label_by_number(&payload_network, &selected_version)
-            .unwrap();
+                        let selected_network =
+                            inquire::Select::new("Choose the network", network_options)
+                                .prompt()
+                                .into_diagnostic()?;
+                        payload.insert(
+                            field.to_string(),
+                            serde_json::Value::String(selected_network.into()),
+                        );
+                    }
+                    KnownField::OperatorVersion => {
+                        payload.insert(field.to_string(), serde_json::Value::String("1".into()));
+                    }
+                }
+                continue;
+            }
+
+            let value = inquire::Text::new(&format!("Fill out the {field}"))
+                .prompt()
+                .into_diagnostic()?;
+            payload.insert(field.to_string(), serde_json::Value::String(value));
+        }
     }
-
-    let tier_options = options.get_tiers();
-
-    let selected_tier = inquire::Select::new("Choose the throughput tier", tier_options)
-        .prompt()
-        .into_diagnostic()?;
-
-    let payload_tier: String = options.find_tier_key_by_value(&selected_tier).unwrap();
-
-    println!("You are about to create a new port with the following configuration:");
-    println!("Kind: {}", kind);
-    println!("Network: {}", selected_network);
-    if !selected_version.is_empty() {
-        println!("Version: {}", selected_version);
-    }
-    println!("Tier: {}", selected_tier);
 
     let confirm = inquire::Confirm::new("Do you want to proceed?")
         .prompt()
@@ -75,17 +71,10 @@ pub async fn run(_args: Args, cli: &crate::Cli) -> miette::Result<()> {
         return Ok(());
     }
 
-    let result = api::create_port(
-        cli,
-        &kind,
-        &payload_network,
-        &payload_version,
-        &payload_tier,
-    )
-    .await
-    .into_diagnostic()?;
+    let spec = serde_json::Value::Object(payload);
+    let result = rpc::resources::create(&api_key, &id, &kind, &spec.to_string()).await?;
 
-    pretty_print_port(result);
+    println!("Port {}({}) created", result.kind, result.id);
 
     Ok(())
 }

@@ -1,7 +1,9 @@
 use clap::Parser;
 
-use crate::api::{get, PortInfo};
-use miette::IntoDiagnostic;
+use crate::{
+    context::extract_context_data,
+    rpc::{self},
+};
 
 use super::format::pretty_print_ports_table;
 
@@ -14,7 +16,8 @@ pub async fn run(cli: &crate::Cli) -> miette::Result<()> {
         .as_ref()
         .ok_or(miette::miette!("can't list ports without a context"))?;
 
-    let response: Vec<PortInfo> = get(cli, "ports").await.into_diagnostic()?; // Use the imported `get` function
+    let (api_key, id, _) = extract_context_data(cli);
+    let response = rpc::resources::find(&api_key, &id).await?;
 
     if response.is_empty() {
         println!("No ports found");

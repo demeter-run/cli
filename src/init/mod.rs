@@ -1,10 +1,13 @@
-use crate::core::Context;
+use crate::context::Context;
 use clap::Parser;
 use miette::{Context as _, IntoDiagnostic as _};
 use std::fmt::Display;
 
-#[derive(Parser)]
+#[derive(Parser, Debug)]
 pub struct Args {
+    /// Project ID we are currently working on
+    #[arg(short, long, global = true, env = "DMTR_PROJECT_ID")]
+    id: Option<String>,
     /// Name of the namespace we're working on
     #[arg(short, long, global = true, env = "DMTR_NAMESPACE")]
     namespace: Option<String>,
@@ -17,7 +20,7 @@ pub struct Args {
 mod apikey;
 mod login;
 mod manual;
-mod project;
+pub mod project;
 
 enum ContextOption<'a> {
     Existing(&'a Context),
@@ -27,9 +30,9 @@ enum ContextOption<'a> {
 impl<'a> Display for ContextOption<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ContextOption::Existing(x) => match x.namespace.caption.as_deref() {
-                Some(caption) => write!(f, "{} ({})", x.namespace.name, caption),
-                _ => write!(f, "{}", x.namespace.name),
+            ContextOption::Existing(x) => match &x.project.name {
+                Some(name) => write!(f, "{} ({})", x.project.namespace, name),
+                _ => write!(f, "{}", x.project.namespace),
             },
             ContextOption::ImportProject => f.write_str("<import from cloud>"),
         }
@@ -41,22 +44,22 @@ pub async fn import_context(dirs: &crate::dirs::Dirs) -> miette::Result<Context>
 
     let project = project::define_project(&access_token).await?;
 
-    let api_key = apikey::define_api_key(&access_token, &project.namespace).await?;
+    let api_key = apikey::define_api_key(&access_token, &project.id).await?;
 
-    let ctx = crate::core::Context {
-        namespace: crate::core::Namespace::new(&project.namespace, project.caption),
-        auth: crate::core::Auth::api_key(&api_key),
-        cloud: crate::core::Cloud::default(),
-        operator: crate::core::Operator::default(),
+    let ctx = crate::context::Context {
+        project: crate::context::Project::new(&project.id, &project.namespace, Some(project.name)),
+        auth: crate::context::Auth::api_key(&api_key),
+        cloud: crate::context::Cloud::default(),
+        operator: crate::context::Operator::default(),
     };
 
-    crate::core::overwrite_context(&project.namespace, ctx.clone(), false, &dirs)?;
+    crate::context::overwrite_context(&project.namespace, ctx.clone(), false, dirs)?;
 
     Ok(ctx)
 }
 
 async fn define_context(dirs: &crate::dirs::Dirs) -> miette::Result<Context> {
-    let config = crate::core::load_config(dirs).context("loading config")?;
+    let config = crate::context::load_config(dirs).context("loading config")?;
 
     if config.contexts.is_empty() {
         return import_context(dirs).await;
@@ -81,26 +84,27 @@ async fn define_context(dirs: &crate::dirs::Dirs) -> miette::Result<Context> {
 
 pub async fn run(args: Args, dirs: &crate::dirs::Dirs) -> miette::Result<()> {
     if args.namespace.is_some() && args.api_key.is_some() {
+        let id = args.id.unwrap();
         let namespace = args.namespace.unwrap();
         let api_key = args.api_key.unwrap();
-        manual::run(&namespace, &api_key, dirs).await?;
+        manual::run(&id, &namespace, &api_key, dirs).await?;
         return Ok(());
     };
 
     println!("Welcome to");
     println!(include_str!("asciiart.txt"));
-    println!("");
+    println!("\n");
     println!("This process will help you set up your CLI to use Demeter platform.");
     println!("Let's get started!");
-    println!("");
+    println!("\n");
 
-    let ctx = define_context(&dirs).await?;
+    let ctx = define_context(dirs).await?;
 
-    crate::core::set_default_context(&ctx.namespace.name, &dirs)?;
+    crate::context::set_default_context(&ctx.project.namespace, dirs)?;
 
     println!(
         "You CLI is now configured to use context {}",
-        ctx.namespace.name
+        ctx.project.namespace
     );
 
     println!("Check out the ports sub-command to start operating");
