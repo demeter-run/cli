@@ -174,7 +174,7 @@ pub fn load_context_by_name(
 ) -> miette::Result<Option<Context>> {
     let mut config = load_config(dirs)?;
     let out = config.contexts.remove(name);
-    return Ok(out);
+    Ok(out)
 }
 
 pub fn load_default_context(dirs: &crate::dirs::Dirs) -> miette::Result<Option<Context>> {

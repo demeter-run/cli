@@ -1,3 +1,4 @@
+use base64::prelude::*;
 use miette::IntoDiagnostic;
 use ocipkg::{image::Builder, ImageName};
 use std::path::{Path, PathBuf};
@@ -55,7 +56,7 @@ pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
     let _ = builder.into_inner();
 
     let registry_url = name.registry_url().into_diagnostic()?;
-    let registry_auth = base64::encode(&args.registry_auth);
+    let registry_auth = BASE64_STANDARD.encode(&args.registry_auth);
 
     let mut new_auth = ocipkg::distribution::StoredAuth::default();
     new_auth.insert(registry_url.domain().unwrap(), registry_auth);

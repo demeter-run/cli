@@ -4,7 +4,6 @@ use std::path::PathBuf;
 use tracing::Level;
 use tracing_subscriber::{layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
-mod api;
 mod context;
 mod dirs;
 mod init;
