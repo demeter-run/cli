@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use miette::{Context as MietteContext, IntoDiagnostic};
 use serde::{Deserialize, Serialize};
 
+use crate::rpc;
+
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Config {
     pub contexts: HashMap<String, Context>,
@@ -12,24 +14,21 @@ pub struct Config {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Context {
     pub project: Project,
-    pub cloud: Cloud,
-    pub operator: Operator,
     pub auth: Auth,
 }
 
 impl Context {
-    pub fn ephemeral(id: &str, namespace: &str, api_key: &str) -> Self {
-        let project = crate::context::Project::new(id, namespace, None);
-        let auth = crate::context::Auth::api_key(api_key);
-        let cloud = crate::context::Cloud::default();
-        let operator = crate::context::Operator::default();
+    pub async fn ephemeral(id: &str, api_key: &str) -> miette::Result<Self> {
+        let project = rpc::projects::find_by_id(
+            rpc::auth::Credential::Secret((id.into(), api_key.into())),
+            id,
+        )
+        .await?;
 
-        Self {
-            project,
-            auth,
-            cloud,
-            operator,
-        }
+        let project = crate::context::Project::new(id, &project.namespace, Some(project.name));
+        let auth = crate::context::Auth::api_key(api_key);
+
+        Ok(Self { project, auth })
     }
 }
 
@@ -63,36 +62,6 @@ impl Auth {
             name: "default".to_owned(),
             method: "ApiKey".to_owned(),
             token: api_key.to_owned(),
-        }
-    }
-}
-
-const DEFAULT_CLOUD: &str = "cloud0.txpipe.io";
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct Cloud {
-    pub name: String,
-}
-
-impl Default for Cloud {
-    fn default() -> Self {
-        Self {
-            name: DEFAULT_CLOUD.to_string(),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct Operator {
-    pub name: String,
-    pub entrypoint: String,
-}
-
-impl Default for Operator {
-    fn default() -> Self {
-        Self {
-            name: "TxPipe".to_owned(),
-            entrypoint: "us1.demeter.run".to_owned(),
         }
     }
 }
@@ -188,22 +157,19 @@ pub fn load_default_context(dirs: &crate::dirs::Dirs) -> miette::Result<Option<C
 
     Ok(None)
 }
-pub fn infer_context(
-    id: Option<&str>,
+
+pub async fn infer_context(
     name: Option<&str>,
-    namespace: Option<&str>,
+    project_id: Option<&str>,
     api_key: Option<&str>,
     dirs: &crate::dirs::Dirs,
 ) -> miette::Result<Option<Context>> {
-    match (id, name, namespace, api_key) {
-        (Some(id), None, Some(ns), Some(ak)) => Ok(Some(Context::ephemeral(id, ns, ak))),
-        (None, None, None, None) => load_default_context(dirs),
-        (None, Some(context), None, None) => load_context_by_name(context, dirs),
-        (None, None, None, Some(_)) => Err(miette::miette!("missing namespace or id value")),
-        (Some(_), None, Some(_), None) => Err(miette::miette!("missing api key value")),
-        (..) => Err(miette::miette!(
-            "conflicting values, specify either a context or namespace"
-        )),
+    match (name, project_id, api_key) {
+        (None, Some(id), Some(ak)) => Ok(Some(Context::ephemeral(id, ak).await?)),
+        (None, None, Some(_)) => Err(miette::miette!("missing project id value")),
+        (None, Some(_), None) => Err(miette::miette!("missing api key value")),
+        (Some(context), _, _) => load_context_by_name(context, dirs),
+        _ => load_default_context(dirs),
     }
 }
 

@@ -20,18 +20,15 @@ pub struct Args {
     #[command(subcommand)]
     command: Commands,
 
+    /// Project ID uuid
     #[arg(short, long, global = true, env = "DMTR_PROJECT_ID")]
     project_id: Option<String>,
-
-    /// Name of the namespace we're working on
-    #[arg(short, long, global = true, env = "DMTR_NAMESPACE")]
-    namespace: Option<String>,
 
     /// The api key to use as authentication
     #[arg(short, long, global = true, env = "DMTR_API_KEY")]
     api_key: Option<String>,
 
-    /// Name of the context we're working on
+    /// Name of the context
     #[arg(short, long, global = true, env = "DMTR_CONTEXT")]
     context: Option<String>,
 
@@ -79,22 +76,21 @@ async fn main() -> miette::Result<()> {
     let context = context::infer_context(
         args.context.as_deref(),
         args.project_id.as_deref(),
-        args.namespace.as_deref(),
         args.api_key.as_deref(),
         &dirs,
-    )?;
+    )
+    .await?;
 
     let cli = Cli { context, dirs };
 
     if args.verbose {
         tracing_subscriber::registry()
-            //.with(tracing_subscriber::filter::LevelFilter::INFO)
             .with(tracing_subscriber::filter::Targets::default().with_target("dmtr", Level::DEBUG))
             .init();
     }
 
     match args.command {
-        Commands::Init(args) => init::run(args, &cli.dirs).await,
+        Commands::Init(args) => init::run(args, &cli).await,
         Commands::Pages(args) => pages::run(args, &cli).await,
         Commands::Ports(args) => ports::run(args, &cli).await,
     }
