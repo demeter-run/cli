@@ -32,7 +32,7 @@ pub enum Commands {
 
 pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
     match args.command {
-        Commands::List(_x) => list::run(cli).await,
+        Commands::List(_) => list::run(cli).await,
         Commands::Show(x) => show::run(x, cli).await,
         Commands::Create(x) => create::run(x, cli).await,
         Commands::Delete(x) => delete::run(x, cli).await,

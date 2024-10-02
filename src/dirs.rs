@@ -19,6 +19,7 @@ pub fn ensure_root_dir(explicit: Option<&Path>) -> miette::Result<PathBuf> {
     Ok(defined)
 }
 
+#[derive(Debug)]
 pub struct Dirs {
     root_dir: PathBuf,
 }

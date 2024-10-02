@@ -21,8 +21,8 @@ pub struct Args {
     #[command(subcommand)]
     command: Commands,
 
-    #[arg(short, long, global = true, env = "DMTR_ID")]
-    id: Option<String>,
+    #[arg(short, long, global = true, env = "DMTR_PROJECT_ID")]
+    project_id: Option<String>,
 
     /// Name of the namespace we're working on
     #[arg(short, long, global = true, env = "DMTR_NAMESPACE")]
@@ -61,6 +61,7 @@ pub enum Commands {
     Ports(ports::Args),
 }
 
+#[derive(Debug)]
 pub struct Cli {
     pub dirs: dirs::Dirs,
     pub context: Option<context::Context>,
@@ -78,7 +79,7 @@ async fn main() -> miette::Result<()> {
 
     let context = context::infer_context(
         args.context.as_deref(),
-        args.id.as_deref(),
+        args.project_id.as_deref(),
         args.namespace.as_deref(),
         args.api_key.as_deref(),
         &dirs,

@@ -103,14 +103,13 @@ async fn connect_remote<'a>(
 
 fn define_socket_path(
     explicit: Option<PathBuf>,
-    network: &str,
-    kind: &str,
+    name: &str,
     dirs: &crate::dirs::Dirs,
     ctx: &crate::context::Context,
 ) -> miette::Result<PathBuf> {
     let default = dirs
         .ensure_tmp_dir(&ctx.project.namespace)?
-        .join(format!("{}-{}.socket", network, kind));
+        .join(format!("{name}.socket"));
 
     let path = explicit.to_owned().unwrap_or(default);
 
@@ -247,11 +246,10 @@ pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
         .into_diagnostic()
         .context("error parsing resource spec")?;
 
-    let network = spec.get("network").as_ref().unwrap().to_string();
-    let auth_token = spec.get("authToken").as_ref().unwrap().to_string();
-    let hostname = format!("{}.cnode-m1.demeter.run", auth_token).to_string();
+    let auth_token = spec.get("authToken").unwrap().as_str().unwrap();
+    let hostname = format!("{}.cnode-m1.demeter.run", auth_token);
 
-    let socket_path = define_socket_path(args.socket, &network, &resource.kind, &cli.dirs, ctx)
+    let socket_path = define_socket_path(args.socket, &resource.name, &cli.dirs, ctx)
         .context("error defining unix socket path")?;
 
     debug!(path = ?socket_path, "socket path defined");
