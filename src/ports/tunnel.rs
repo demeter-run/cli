@@ -1,4 +1,4 @@
-use crate::{api::PortInfoList, context::extract_context_data, rpc};
+use crate::{context::extract_context_data, rpc};
 use clap::Parser;
 use colored::Colorize;
 use dmtri::demeter::ops::v1alpha::Resource;
@@ -68,10 +68,6 @@ async fn connect_remote<'a>(
         sref.set_keepalive(true).unwrap();
     }
 
-    // remote
-    //     .set_linger(Some(Duration::from_secs(6000000)))
-    //     .unwrap();
-
     let certs = rustls_native_certs::load_native_certs()
         .into_diagnostic()
         .context("error loading TLS certificates")?;
@@ -107,15 +103,13 @@ async fn connect_remote<'a>(
 
 fn define_socket_path(
     explicit: Option<PathBuf>,
-    port: &PortInfoList,
+    name: &str,
     dirs: &crate::dirs::Dirs,
     ctx: &crate::context::Context,
 ) -> miette::Result<PathBuf> {
-    let default = dirs.ensure_tmp_dir(&ctx.project.namespace)?.join(format!(
-        "{}-{}.socket",
-        port.network.as_ref().unwrap(),
-        port.port.as_ref().unwrap()
-    ));
+    let default = dirs
+        .ensure_tmp_dir(&ctx.project.namespace)?
+        .join(format!("{name}.socket"));
 
     let path = explicit.to_owned().unwrap_or(default);
 
@@ -170,7 +164,6 @@ fn get_instance_parts(instance: &str) -> (String, String) {
 async fn define_port(explicit: Option<String>, cli: &crate::Cli) -> miette::Result<Resource> {
     let (api_key, id, _) = extract_context_data(cli);
     let response = rpc::resources::find(&api_key, &id).await?;
-    println!("{:?}", response);
     if response.is_empty() {
         bail!("you don't have any cardano-node ports, run dmtrctl ports create");
     }
@@ -184,17 +177,6 @@ async fn define_port(explicit: Option<String>, cli: &crate::Cli) -> miette::Resu
     if available.is_empty() {
         bail!("you don't have any cardano-node ports, run dmtrctl ports create");
     }
-
-    // let available: Vec<_> = api::get::<Vec<PortInfo>>(cli, &format!("ports/{}",
-    // CARDANO_NODE_KIND))     .await
-    //     .into_diagnostic()?
-    //     .into_iter()
-    //     .map(NodeOption)
-    //     .collect();
-    //
-    // if available.is_empty() {
-    //     bail!("you don't have any cardano-node ports, run dmtrctl ports create");
-    // }
 
     if let Some(explicit) = explicit {
         let (kind, id) = get_instance_parts(&explicit);
@@ -250,29 +232,24 @@ impl ClientCounter {
     }
 }
 
-const CARDANO_NODE_KIND: &str = "cardano-node";
+const CARDANO_NODE_KIND: &str = "CardanoNodePort";
 
-// #[instrument("connect", skip_all)]
 pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
     let ctx = cli
         .context
         .as_ref()
         .ok_or(miette::miette!("missing context"))?;
 
-    let port_info = define_port(args.port, cli).await?;
+    let resource = define_port(args.port, cli).await?;
 
-    let spec = serde_json::from_str::<PortInfoList>(&port_info.spec)
+    let spec: serde_json::Value = serde_json::from_str(&resource.spec)
         .into_diagnostic()
-        .context("error parsing port spec")?;
+        .context("error parsing resource spec")?;
 
-    let auth_token = spec.auth_token.as_ref().unwrap();
-    let hostname = format!("{}.cnode-m1.demeter.run", auth_token).to_string();
-    // let hostname = match &port_info.instance {
-    //     Instance::Node(x) => &x.authenticated_endpoint,
-    //     _ => bail!("invalid port instance, only kind cardano-node support
-    // tunnels"), };
+    let auth_token = spec.get("authToken").unwrap().as_str().unwrap();
+    let hostname = format!("{}.cnode-m1.demeter.run", auth_token);
 
-    let socket_path = define_socket_path(args.socket, &spec, &cli.dirs, ctx)
+    let socket_path = define_socket_path(args.socket, &resource.name, &cli.dirs, ctx)
         .context("error defining unix socket path")?;
 
     debug!(path = ?socket_path, "socket path defined");

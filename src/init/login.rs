@@ -1,9 +1,7 @@
-use miette::{bail, Context as _, IntoDiagnostic as _};
+use miette::bail;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, time::Duration};
-
-use crate::api;
 
 async fn find_login_url() -> (String, String) {
     let mut params = HashMap::new();
@@ -96,11 +94,6 @@ pub async fn run() -> miette::Result<String> {
         let (status, access_token) = poll_token(&device_code).await;
 
         if status.is_success() {
-            api::account::initialize_user(&access_token)
-                .await
-                .into_diagnostic()
-                .context("initializing user")?;
-
             println!("login successful!");
             return Ok(access_token);
         }

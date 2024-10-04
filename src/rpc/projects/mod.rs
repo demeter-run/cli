@@ -29,6 +29,30 @@ pub async fn find(access_token: &str) -> miette::Result<Vec<proto::Project>> {
     Ok(records)
 }
 
+pub async fn find_by_id(credential: auth::Credential, id: &str) -> miette::Result<proto::Project> {
+    let interceptor = auth::interceptor(credential).await;
+
+    let rpc_url = get_base_url();
+    let channel = Channel::builder(rpc_url.parse().into_diagnostic()?)
+        .connect()
+        .await
+        .into_diagnostic()?;
+
+    let mut client =
+        proto::project_service_client::ProjectServiceClient::with_interceptor(channel, interceptor);
+
+    let request = tonic::Request::new(proto::FetchProjectByIdRequest { id: id.into() });
+
+    let response = client
+        .fetch_project_by_id(request)
+        .await
+        .into_diagnostic()?;
+
+    let record = &response.into_inner().records[0];
+
+    Ok(record.clone())
+}
+
 pub async fn create_project(access_token: &str, name: &str) -> miette::Result<ProjectRef> {
     let credential = auth::Credential::Auth0(access_token.to_owned());
     let interceptor = auth::interceptor(credential).await;

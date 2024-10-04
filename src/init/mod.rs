@@ -1,21 +1,10 @@
-use crate::context::Context;
+use crate::context::{load_config, Context};
 use clap::Parser;
 use miette::{Context as _, IntoDiagnostic as _};
 use std::fmt::Display;
 
 #[derive(Parser, Debug)]
-pub struct Args {
-    /// Project ID we are currently working on
-    #[arg(short, long, global = true, env = "DMTR_PROJECT_ID")]
-    id: Option<String>,
-    /// Name of the namespace we're working on
-    #[arg(short, long, global = true, env = "DMTR_NAMESPACE")]
-    namespace: Option<String>,
-
-    /// The api key to use as authentication
-    #[arg(short, long, global = true, env = "DMTR_API_KEY")]
-    api_key: Option<String>,
-}
+pub struct Args {}
 
 mod apikey;
 mod login;
@@ -49,8 +38,6 @@ pub async fn import_context(dirs: &crate::dirs::Dirs) -> miette::Result<Context>
     let ctx = crate::context::Context {
         project: crate::context::Project::new(&project.id, &project.namespace, Some(project.name)),
         auth: crate::context::Auth::api_key(&api_key),
-        cloud: crate::context::Cloud::default(),
-        operator: crate::context::Operator::default(),
     };
 
     crate::context::overwrite_context(&project.namespace, ctx.clone(), false, dirs)?;
@@ -82,15 +69,7 @@ async fn define_context(dirs: &crate::dirs::Dirs) -> miette::Result<Context> {
     }
 }
 
-pub async fn run(args: Args, dirs: &crate::dirs::Dirs) -> miette::Result<()> {
-    if args.namespace.is_some() && args.api_key.is_some() {
-        let id = args.id.unwrap();
-        let namespace = args.namespace.unwrap();
-        let api_key = args.api_key.unwrap();
-        manual::run(&id, &namespace, &api_key, dirs).await?;
-        return Ok(());
-    };
-
+pub async fn run(_args: Args, cli: &crate::Cli) -> miette::Result<()> {
     println!("Welcome to");
     println!(include_str!("asciiart.txt"));
     println!("\n");
@@ -98,9 +77,18 @@ pub async fn run(args: Args, dirs: &crate::dirs::Dirs) -> miette::Result<()> {
     println!("Let's get started!");
     println!("\n");
 
-    let ctx = define_context(dirs).await?;
+    let config = load_config(&cli.dirs)?;
 
-    crate::context::set_default_context(&ctx.project.namespace, dirs)?;
+    if let Some(context) = cli.context.as_ref() {
+        if !config.contexts.contains_key(&context.project.namespace) {
+            manual::run(context, &cli.dirs).await?;
+            return Ok(());
+        }
+    }
+
+    let ctx = define_context(&cli.dirs).await?;
+
+    crate::context::set_default_context(&ctx.project.namespace, &cli.dirs)?;
 
     println!(
         "You CLI is now configured to use context {}",

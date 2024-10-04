@@ -5,7 +5,7 @@ use crate::{
     rpc::{self},
 };
 
-use super::format::pretty_print_ports_table;
+use super::format::pretty_print_resource_table;
 
 #[derive(Parser)]
 pub struct Args {}
@@ -24,7 +24,7 @@ pub async fn run(cli: &crate::Cli) -> miette::Result<()> {
         return Ok(());
     }
 
-    pretty_print_ports_table(response);
+    pretty_print_resource_table(response);
 
     Ok(())
 }
