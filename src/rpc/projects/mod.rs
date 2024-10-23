@@ -22,7 +22,11 @@ pub async fn find(access_token: &str) -> miette::Result<Vec<proto::Project>> {
     let mut client =
         proto::project_service_client::ProjectServiceClient::with_interceptor(channel, interceptor);
 
-    let request = tonic::Request::new(proto::FetchProjectsRequest::default());
+    let request = tonic::Request::new(proto::FetchProjectsRequest {
+        page: Some(1),
+        page_size: Some(100),
+    });
+
     let response = client.fetch_projects(request).await.into_diagnostic()?;
     let records = response.into_inner().records;
 

@@ -11,14 +11,15 @@ pub fn pretty_print_resource_table(resources: Vec<Resource>) {
         .load_preset(UTF8_FULL)
         .apply_modifier(UTF8_ROUND_CORNERS)
         .set_content_arrangement(ContentArrangement::Dynamic)
-        .set_header(vec!["ID", "Kind", "Name", "Created At"]);
+        .set_header(vec!["", "ID", "Kind", "Name", "Created At"]);
 
-    for resource in resources {
+    for (i, resource) in resources.iter().enumerate() {
         table.add_row(vec![
-            resource.id,
-            resource.name,
-            resource.kind,
-            resource.created_at,
+            &(i + 1).to_string(),
+            &resource.id,
+            &resource.name,
+            &resource.kind,
+            &resource.created_at,
         ]);
     }
 
