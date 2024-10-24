@@ -21,7 +21,8 @@ pub async fn find(api_key: &str, project_id: &str) -> miette::Result<Vec<proto::
 
     let request = tonic::Request::new(proto::FetchResourcesRequest {
         project_id: project_id.to_owned(),
-        ..Default::default()
+        page: Some(1),
+        page_size: Some(100),
     });
 
     let response = client.fetch_resources(request).await.into_diagnostic()?;
