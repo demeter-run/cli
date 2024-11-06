@@ -156,12 +156,7 @@ impl std::fmt::Display for NodeOption {
     }
 }
 
-fn get_instance_parts(instance: &str) -> (String, String) {
-    let parts: Vec<&str> = instance.split('/').collect();
-    (parts[0].to_string(), parts[1].to_string())
-}
-
-async fn define_port(explicit: Option<String>, cli: &crate::Cli) -> miette::Result<Resource> {
+async fn define_port(port_name: Option<String>, cli: &crate::Cli) -> miette::Result<Resource> {
     let (api_key, id, _) = extract_context_data(cli);
     let response = rpc::resources::find(&api_key, &id).await?;
     if response.is_empty() {
@@ -178,19 +173,13 @@ async fn define_port(explicit: Option<String>, cli: &crate::Cli) -> miette::Resu
         bail!("you don't have any cardano-node ports, run dmtrctl ports create");
     }
 
-    if let Some(explicit) = explicit {
-        let (kind, id) = get_instance_parts(&explicit);
-
-        if kind != CARDANO_NODE_KIND {
-            bail!("tunnels are only supported for cardano-node ports");
-        }
-
-        let explicit = available
-            .iter()
-            .find(|p| p.0.id == id)
+    if let Some(port_name) = port_name {
+        let port = available
+            .into_iter()
+            .find(|p| p.0.name == port_name)
             .ok_or(miette::miette!("can't find port"))?;
 
-        return Ok(explicit.0.clone());
+        return Ok(port.0);
     }
 
     let selection = inquire::Select::new("select port", available)
