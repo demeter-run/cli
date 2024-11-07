@@ -1,6 +1,6 @@
 [package]
 name = "dmtrctl"
-version = "1.4.1"
+version = "2.0.0"
 edition = "2021"
 repository = "https://github.com/demeter-run/cli"
 license = "Apache-2.0"
