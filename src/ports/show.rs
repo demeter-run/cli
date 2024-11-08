@@ -16,7 +16,7 @@ pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
         .as_ref()
         .ok_or(miette::miette!("can't list ports without a context"))?;
 
-    let (api_key, project_id, _) = extract_context_data(cli);
+    let (api_key, project_id, _) = extract_context_data(cli).await?;
     let resouces = rpc::resources::find_by_id(&api_key, &project_id, &args.id).await?;
 
     if resouces.is_empty() {

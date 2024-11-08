@@ -19,9 +19,9 @@ enum ContextOption<'a> {
 impl<'a> Display for ContextOption<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ContextOption::Existing(x) => match &x.project.name {
-                Some(name) => write!(f, "{} ({})", x.project.namespace, name),
-                _ => write!(f, "{}", x.project.namespace),
+            ContextOption::Existing(x) => match &x.namespace.caption {
+                Some(name) => write!(f, "{} ({})", x.namespace.name, name),
+                _ => write!(f, "{}", x.namespace.name),
             },
             ContextOption::ImportProject => f.write_str("<import from cloud>"),
         }
@@ -36,7 +36,7 @@ pub async fn import_context(dirs: &crate::dirs::Dirs) -> miette::Result<Context>
     let api_key = apikey::define_api_key(&access_token, &project.id).await?;
 
     let ctx = crate::context::Context {
-        project: crate::context::Project::new(&project.id, &project.namespace, Some(project.name)),
+        namespace: crate::context::Namespace::new(&project.namespace, Some(project.name)),
         auth: crate::context::Auth::api_key(&api_key),
     };
 
@@ -80,7 +80,7 @@ pub async fn run(_args: Args, cli: &crate::Cli) -> miette::Result<()> {
     let config = load_config(&cli.dirs)?;
 
     if let Some(context) = cli.context.as_ref() {
-        if !config.contexts.contains_key(&context.project.namespace) {
+        if !config.contexts.contains_key(&context.namespace.name) {
             manual::run(context, &cli.dirs).await?;
             return Ok(());
         }
@@ -88,11 +88,11 @@ pub async fn run(_args: Args, cli: &crate::Cli) -> miette::Result<()> {
 
     let ctx = define_context(&cli.dirs).await?;
 
-    crate::context::set_default_context(&ctx.project.namespace, &cli.dirs)?;
+    crate::context::set_default_context(&ctx.namespace.name, &cli.dirs)?;
 
     println!(
         "You CLI is now configured to use context {}",
-        ctx.project.namespace
+        ctx.namespace.name
     );
 
     println!("Check out the ports sub-command to start operating");

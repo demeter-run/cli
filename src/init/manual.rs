@@ -4,7 +4,7 @@ use crate::context::Context;
 
 pub async fn run(context: &Context, dirs: &crate::dirs::Dirs) -> miette::Result<()> {
     println!("Setting up context for:\n");
-    println!("  Project: {}", context.project.namespace);
+    println!("  Project: {}", context.namespace.name);
     println!("  API key: {}\n", context.auth.token);
 
     let is_default = inquire::Confirm::new("use as default context?")
@@ -14,12 +14,7 @@ pub async fn run(context: &Context, dirs: &crate::dirs::Dirs) -> miette::Result<
         .prompt()
         .into_diagnostic()?;
 
-    crate::context::overwrite_context(
-        &context.project.namespace,
-        context.clone(),
-        is_default,
-        dirs,
-    )?;
+    crate::context::overwrite_context(&context.namespace.name, context.clone(), is_default, dirs)?;
 
     Ok(())
 }

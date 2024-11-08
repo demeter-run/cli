@@ -11,7 +11,7 @@ use tokio::{
     io::{AsyncRead, AsyncWrite},
     net::{TcpStream, UnixStream},
 };
-use tracing::{debug, info, warn};
+use tracing::{debug, error, info, warn};
 
 #[derive(Parser)]
 pub struct Args {
@@ -108,7 +108,7 @@ fn define_socket_path(
     ctx: &crate::context::Context,
 ) -> miette::Result<PathBuf> {
     let default = dirs
-        .ensure_tmp_dir(&ctx.project.namespace)?
+        .ensure_tmp_dir(&ctx.namespace.name)?
         .join(format!("{name}.socket"));
 
     let path = explicit.to_owned().unwrap_or(default);
@@ -152,13 +152,25 @@ struct NodeOption(Resource);
 
 impl std::fmt::Display for NodeOption {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}/{} ({})", self.0.kind, self.0.id, self.0.spec)
+        let network = match serde_json::from_str::<serde_json::Value>(&self.0.spec) {
+            Ok(spec) => match spec.get("network") {
+                Some(v) => v.as_str().unwrap().to_string(),
+                None => "unknown".to_string(),
+            },
+            Err(err) => {
+                error!(?err);
+                "unknown".to_string()
+            }
+        };
+
+        write!(f, "{}: {} - {}", self.0.kind, self.0.name, network)
     }
 }
 
 async fn define_port(port_name: Option<String>, cli: &crate::Cli) -> miette::Result<Resource> {
-    let (api_key, id, _) = extract_context_data(cli);
-    let response = rpc::resources::find(&api_key, &id).await?;
+    let (api_key, project_id, _) = extract_context_data(cli).await?;
+
+    let response = rpc::resources::find(&api_key, &project_id).await?;
     if response.is_empty() {
         bail!("you don't have any cardano-node ports, run dmtrctl ports create");
     }

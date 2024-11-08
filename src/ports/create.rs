@@ -7,7 +7,7 @@ use crate::{context::extract_context_data, rpc};
 pub struct Args {}
 
 pub async fn run(_args: Args, cli: &crate::Cli) -> miette::Result<()> {
-    let (api_key, id, _) = extract_context_data(cli);
+    let (api_key, project_id, _) = extract_context_data(cli).await?;
 
     let metadata = rpc::metadata::find().await?;
 
@@ -54,7 +54,7 @@ pub async fn run(_args: Args, cli: &crate::Cli) -> miette::Result<()> {
     }
 
     let spec = resource_option_selected.spec.to_string();
-    let result = rpc::resources::create(&api_key, &id, &kind_selected, &spec).await?;
+    let result = rpc::resources::create(&api_key, &project_id, &kind_selected, &spec).await?;
 
     println!("Port {}({}) created", result.kind, result.id);
 
