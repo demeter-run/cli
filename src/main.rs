@@ -20,9 +20,9 @@ pub struct Args {
     #[command(subcommand)]
     command: Commands,
 
-    /// Project ID uuid
-    #[arg(short, long, global = true, env = "DMTR_PROJECT_ID")]
-    project_id: Option<String>,
+    /// Name of the namespace we're working on
+    #[arg(short, long, global = true, env = "DMTR_NAMESPACE")]
+    namespace: Option<String>,
 
     /// The api key to use as authentication
     #[arg(short, long, global = true, env = "DMTR_API_KEY")]
@@ -47,10 +47,10 @@ pub struct Args {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// initialize your Demeter project
+    /// Initialize your Demeter project
     Init(init::Args),
 
-    /// interact with Demeter Pages
+    /// Interact with Demeter Pages
     Pages(pages::Args),
 
     /// Ports-specific commands
@@ -75,7 +75,7 @@ async fn main() -> miette::Result<()> {
 
     let context = context::infer_context(
         args.context.as_deref(),
-        args.project_id.as_deref(),
+        args.namespace.as_deref(),
         args.api_key.as_deref(),
         &dirs,
     )

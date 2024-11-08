@@ -19,9 +19,11 @@ pub async fn interceptor(credential: Credential) -> impl Interceptor {
                     MetadataValue::try_from(&format!("Bearer {}", token)).unwrap(),
                 );
             }
-            Credential::Secret((project_id, secret)) => {
-                req.metadata_mut()
-                    .insert("project-id", MetadataValue::try_from(project_id).unwrap());
+            Credential::Secret((project_namespace, secret)) => {
+                req.metadata_mut().insert(
+                    "project-namespace",
+                    MetadataValue::try_from(project_namespace).unwrap(),
+                );
                 req.metadata_mut()
                     .insert("dmtr-api-key", MetadataValue::try_from(secret).unwrap());
             }

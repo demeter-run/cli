@@ -13,38 +13,29 @@ pub struct Config {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Context {
-    pub project: Project,
+    pub namespace: Namespace,
     pub auth: Auth,
 }
 
 impl Context {
-    pub async fn ephemeral(id: &str, api_key: &str) -> miette::Result<Self> {
-        let project = rpc::projects::find_by_id(
-            rpc::auth::Credential::Secret((id.into(), api_key.into())),
-            id,
-        )
-        .await?;
-
-        let project = crate::context::Project::new(id, &project.namespace, Some(project.name));
+    pub async fn ephemeral(namespace: &str, api_key: &str) -> miette::Result<Self> {
+        let namespace = crate::context::Namespace::new(namespace, None);
         let auth = crate::context::Auth::api_key(api_key);
 
-        Ok(Self { project, auth })
+        Ok(Self { namespace, auth })
     }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct Project {
-    pub id: String,
-    pub name: Option<String>,
-    pub namespace: String,
+pub struct Namespace {
+    pub name: String,
+    pub caption: Option<String>,
 }
-
-impl Project {
-    pub fn new(id: &str, namespace: &str, name: Option<String>) -> Self {
+impl Namespace {
+    pub fn new(name: &str, caption: Option<String>) -> Self {
         Self {
-            id: id.to_owned(),
-            namespace: namespace.to_owned(),
-            name,
+            name: name.to_owned(),
+            caption,
         }
     }
 }
@@ -160,12 +151,12 @@ pub fn load_default_context(dirs: &crate::dirs::Dirs) -> miette::Result<Option<C
 
 pub async fn infer_context(
     name: Option<&str>,
-    project_id: Option<&str>,
+    namespace: Option<&str>,
     api_key: Option<&str>,
     dirs: &crate::dirs::Dirs,
 ) -> miette::Result<Option<Context>> {
-    match (name, project_id, api_key) {
-        (None, Some(id), Some(ak)) => Ok(Some(Context::ephemeral(id, ak).await?)),
+    match (name, namespace, api_key) {
+        (None, Some(namespace), Some(ak)) => Ok(Some(Context::ephemeral(namespace, ak).await?)),
         (None, None, Some(_)) => Err(miette::miette!("missing project id value")),
         (None, Some(_), None) => Err(miette::miette!("missing api key value")),
         (Some(context), _, _) => load_context_by_name(context, dirs),
@@ -173,10 +164,15 @@ pub async fn infer_context(
     }
 }
 
-pub fn extract_context_data(cli: &crate::Cli) -> (String, String, String) {
+pub async fn extract_context_data(cli: &crate::Cli) -> miette::Result<(String, String, String)> {
     let api_key = cli.context.as_ref().unwrap().auth.token.clone();
-    let namespace = cli.context.as_ref().unwrap().project.namespace.clone();
-    let id = cli.context.as_ref().unwrap().project.id.clone();
+    let namespace = cli.context.as_ref().unwrap().namespace.name.clone();
 
-    (api_key, id, namespace)
+    let project = rpc::projects::find_by_namespace(
+        rpc::auth::Credential::Secret((namespace.clone(), api_key.clone())),
+        &namespace,
+    )
+    .await?;
+
+    Ok((api_key, project.id, namespace))
 }

@@ -27,7 +27,7 @@ pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
         return Ok(());
     }
 
-    let (api_key, project_id, _) = extract_context_data(cli);
+    let (api_key, project_id, _) = extract_context_data(cli).await?;
 
     rpc::resources::delete(&api_key, &project_id, &args.id)
         .await

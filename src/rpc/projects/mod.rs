@@ -33,7 +33,10 @@ pub async fn find(access_token: &str) -> miette::Result<Vec<proto::Project>> {
     Ok(records)
 }
 
-pub async fn find_by_id(credential: auth::Credential, id: &str) -> miette::Result<proto::Project> {
+pub async fn find_by_namespace(
+    credential: auth::Credential,
+    namespace: &str,
+) -> miette::Result<proto::Project> {
     let interceptor = auth::interceptor(credential).await;
 
     let rpc_url = get_base_url();
@@ -45,10 +48,12 @@ pub async fn find_by_id(credential: auth::Credential, id: &str) -> miette::Resul
     let mut client =
         proto::project_service_client::ProjectServiceClient::with_interceptor(channel, interceptor);
 
-    let request = tonic::Request::new(proto::FetchProjectByIdRequest { id: id.into() });
+    let request = tonic::Request::new(proto::FetchProjectByNamespaceRequest {
+        namespace: namespace.into(),
+    });
 
     let response = client
-        .fetch_project_by_id(request)
+        .fetch_project_by_namespace(request)
         .await
         .into_diagnostic()?;
 
