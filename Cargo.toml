@@ -20,7 +20,7 @@ indexmap = { version = "2.2.6", features = ["serde"] }
 inquire = "0.6.2"
 json = "0.12.4"
 miette = { version = "5.10.0", features = ["fancy"] }
-tonic = { version = "0.11.0", features = ["transport", "tls", "tls-roots"]}
+tonic = { version = "0.11.0", features = ["transport", "tls-webpki-roots"]}
 ocipkg = "0.2.8"
 reqwest = { version = "0.11.20", features = ["blocking", "json", "rustls-tls-webpki-roots"] }
 rustls-native-certs = "0.7"
