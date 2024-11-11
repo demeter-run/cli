@@ -1,6 +1,6 @@
 [package]
 name = "dmtrctl"
-version = "2.0.0"
+version = "2.0.1"
 edition = "2021"
 repository = "https://github.com/demeter-run/cli"
 license = "Apache-2.0"
@@ -20,9 +20,9 @@ indexmap = { version = "2.2.6", features = ["serde"] }
 inquire = "0.6.2"
 json = "0.12.4"
 miette = { version = "5.10.0", features = ["fancy"] }
-tonic = { version = "0.11.0", features = ["transport", "tls-webpki-roots"]}
+tonic = { version = "0.11", features = ["transport", "tls", "tls-webpki-roots"]}
 ocipkg = "0.2.8"
-reqwest = { version = "0.11.20", features = ["blocking", "json", "rustls-tls-webpki-roots"] }
+reqwest = { version = "0.11.20", features = ["blocking", "json", "rustls-tls"] }
 rustls-native-certs = "0.7"
 semver = "1.0.22"
 serde = { version = "1.0.188", features = ["derive"] }
