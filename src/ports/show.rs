@@ -2,12 +2,15 @@ use clap::Parser;
 
 use crate::{context::extract_context_data, rpc};
 
-use super::format::pretty_print_resouce_detail_table;
+use super::format::{pretty_print_resource_detail_table, pretty_print_resource_detail_json, OutputFormat};
 
 #[derive(Parser)]
 pub struct Args {
     /// the resource uuid
     id: String,
+
+    #[clap(short, long, default_value_t, value_enum)]
+    pub output: OutputFormat,
 }
 
 pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
@@ -24,6 +27,13 @@ pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
         return Ok(());
     }
 
-    pretty_print_resouce_detail_table(resouces)?;
+    match args.output {
+        OutputFormat::Json => { 
+            let response = resouces.first().unwrap();
+            pretty_print_resource_detail_json(response)
+        },
+        OutputFormat::Table => pretty_print_resource_detail_table(resouces)?,
+    }
+    
     Ok(())
 }

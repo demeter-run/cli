@@ -5,12 +5,15 @@ use crate::{
     rpc::{self},
 };
 
-use super::format::pretty_print_resource_table;
+use super::format::{pretty_print_resource_table, pretty_print_resource_json, OutputFormat};
 
 #[derive(Parser)]
-pub struct Args {}
+pub struct Args {
+    #[clap(short, long, default_value_t, value_enum)]
+    pub output: OutputFormat,
+}
 
-pub async fn run(cli: &crate::Cli) -> miette::Result<()> {
+pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
     let _ctx = cli
         .context
         .as_ref()
@@ -24,7 +27,10 @@ pub async fn run(cli: &crate::Cli) -> miette::Result<()> {
         return Ok(());
     }
 
-    pretty_print_resource_table(response);
+    match args.output {
+        OutputFormat::Json => pretty_print_resource_json(response),
+        OutputFormat::Table => pretty_print_resource_table(response),
+    }
 
     Ok(())
 }

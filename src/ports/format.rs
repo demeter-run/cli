@@ -3,6 +3,15 @@ use comfy_table::presets::UTF8_FULL;
 use comfy_table::{ContentArrangement, Table};
 use dmtri::demeter::ops::v1alpha::Resource;
 use miette::IntoDiagnostic;
+use serde::Serialize;
+
+#[derive(clap::ValueEnum, Clone, Default, Debug, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum OutputFormat {
+    #[default]
+    Table,
+    Json,
+}
 
 pub fn pretty_print_resource_table(resources: Vec<Resource>) {
     let mut table = Table::new();
@@ -26,7 +35,72 @@ pub fn pretty_print_resource_table(resources: Vec<Resource>) {
     println!("{table}");
 }
 
-pub fn pretty_print_resouce_detail_table(resources: Vec<Resource>) -> miette::Result<()> {
+pub fn pretty_print_resource_json(resources: Vec<Resource>) {
+    let mut collector = vec![];
+    for resource in resources {
+        collector.push(serde_json::Map::from_iter(vec![
+            ("id".to_string(), serde_json::Value::from(resource.id)),
+            ("name".to_string(), serde_json::Value::from(resource.name)),
+            ("kind".to_string(), serde_json::Value::from(resource.kind)),
+            (
+                "created_at".to_string(),
+                serde_json::Value::from(resource.created_at),
+            ),
+            (
+                "spec".to_string(),
+                serde_json::from_str::<serde_json::Value>(&resource.spec).unwrap(),
+            ),
+            (
+                "annotations".to_string(),
+                serde_json::from_str::<serde_json::Value>(
+                    &resource.annotations.unwrap_or_default(),
+                )
+                .unwrap(),
+            ),
+        ]))
+    }
+    println!("{}", serde_json::to_string_pretty(&collector).unwrap());
+}
+
+pub fn pretty_print_resource_detail_json(resource: &Resource) {
+    println!(
+        "{}",
+        serde_json::to_string_pretty(
+            &(serde_json::Map::from_iter(vec![
+                (
+                    "id".to_string(),
+                    serde_json::Value::from(resource.id.clone())
+                ),
+                (
+                    "name".to_string(),
+                    serde_json::Value::from(resource.name.clone())
+                ),
+                (
+                    "kind".to_string(),
+                    serde_json::Value::from(resource.kind.clone())
+                ),
+                (
+                    "created_at".to_string(),
+                    serde_json::Value::from(resource.created_at.clone()),
+                ),
+                (
+                    "spec".to_string(),
+                    serde_json::from_str::<serde_json::Value>(&resource.spec).unwrap(),
+                ),
+                (
+                    "annotations".to_string(),
+                    serde_json::from_str::<serde_json::Value>(
+                        &resource.annotations.clone().unwrap_or_default(),
+                    )
+                    .unwrap(),
+                ),
+            ]))
+        )
+        .unwrap()
+    );
+}
+
+pub fn pretty_print_resource_detail_table(resources: Vec<Resource>) -> miette::Result<()> {
     let mut table = Table::new();
 
     let Some(first_resource) = resources.first() else {
