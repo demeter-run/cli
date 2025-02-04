@@ -13,6 +13,22 @@ pub enum OutputFormat {
     Json,
 }
 
+impl OutputFormat {
+    pub fn pretty_print(&self, resources: Vec<Resource>) {
+        match self {
+            OutputFormat::Table => pretty_print_resource_table(resources),
+            OutputFormat::Json => pretty_print_resource_json(resources),
+        }
+    }
+
+    pub fn pretty_print_single(&self, resource: &Resource) {
+        match self {
+            OutputFormat::Table => pretty_print_resource_detail_table(resource),
+            OutputFormat::Json => pretty_print_resource_detail_json(resource),
+        }
+    }
+}
+
 pub fn pretty_print_resource_table(resources: Vec<Resource>) {
     let mut table = Table::new();
 
@@ -100,17 +116,13 @@ pub fn pretty_print_resource_detail_json(resource: &Resource) {
     );
 }
 
-pub fn pretty_print_resource_detail_table(resources: Vec<Resource>) -> miette::Result<()> {
+pub fn pretty_print_resource_detail_table(resource: &Resource) {
     let mut table = Table::new();
 
-    let Some(first_resource) = resources.first() else {
-        return Ok(());
-    };
-
     let annotations = serde_json::from_str::<serde_json::Value>(
-        &first_resource.annotations.clone().unwrap_or_default(),
+        &resource.annotations.clone().unwrap_or_default(),
     )
-    .into_diagnostic()?;
+    .unwrap();
     let mut annotations_headers: Vec<String> = annotations
         .as_array()
         .unwrap()
@@ -127,29 +139,25 @@ pub fn pretty_print_resource_detail_table(resources: Vec<Resource>) -> miette::R
         .set_content_arrangement(ContentArrangement::Dynamic)
         .set_header(headers);
 
-    for resource in resources {
-        let mut values: Vec<String> = vec![resource.name];
+    let mut values: Vec<String> = vec![resource.name.clone()];
 
-        if let Some(annotations) = resource.annotations {
-            let annotations: serde_json::Value =
-                serde_json::from_str(&annotations).into_diagnostic()?;
+    if let Some(annotations) = &resource.annotations {
+        let annotations: serde_json::Value =
+            serde_json::from_str(annotations).into_diagnostic().unwrap();
 
-            for value in annotations.as_array().unwrap().iter() {
-                values.push(
-                    value
-                        .get("value")
-                        .unwrap()
-                        .as_str()
-                        .unwrap_or_default()
-                        .into(),
-                );
-            }
+        for value in annotations.as_array().unwrap().iter() {
+            values.push(
+                value
+                    .get("value")
+                    .unwrap()
+                    .as_str()
+                    .unwrap_or_default()
+                    .into(),
+            );
         }
-
-        table.add_row(values);
     }
 
-    println!("{table}");
+    table.add_row(values);
 
-    Ok(())
+    println!("{table}");
 }

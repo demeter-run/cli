@@ -2,10 +2,10 @@ use clap::Parser;
 
 use crate::{
     context::extract_context_data,
-    rpc::{self},
+    rpc,
 };
 
-use super::format::{pretty_print_resource_table, pretty_print_resource_json, OutputFormat};
+use super::format::OutputFormat;
 
 #[derive(Parser)]
 pub struct Args {
@@ -27,10 +27,6 @@ pub async fn run(args: Args, cli: &crate::Cli) -> miette::Result<()> {
         return Ok(());
     }
 
-    match args.output {
-        OutputFormat::Json => pretty_print_resource_json(response),
-        OutputFormat::Table => pretty_print_resource_table(response),
-    }
-
+    args.output.pretty_print(response);
     Ok(())
 }
