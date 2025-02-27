@@ -2,44 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.4.1] - 2024-06-21
-
-### 🐛 Bug Fixes
-
-- Use embedded tls to avoid OS-level requirement (#43)
-
-## [1.4.0] - 2024-06-17
-
-### 🚀 Features
-
-- Refactor tunnel into node-socket (#39)
-- Add client counter for tunnel command (#41)
-
-### 🐛 Bug Fixes
-
-- Use full instance id for tunnel arg (#40)
-
-### ⚙️ Miscellaneous Tasks
-
-- Release dmtrctl version 1.4.0
-
-## [1.3.0] - 2024-06-15
+## [2.1.0] - 2025-02-27
 
 ### 🚀 Features
 
 - Streamline init flow (#35)
+- Refactor tunnel into node-socket (#39)
+- Add client counter for tunnel command (#41)
+- Implemented support to old demeter config (#57)
+- Updated tonic to use tls-webpki-roots
 
 ### 🐛 Bug Fixes
 
 - Jump to new project if list is empty (#36)
 - Skip tunnel type with only one option (#37)
 - Ensure user is initialized after login (#38)
-
-### ⚙️ Miscellaneous Tasks
-
-- Release dmtrctl version 1.3.0
-
-## [1.2.0] - 2024-06-14
+- Use full instance id for tunnel arg (#40)
+- Use embedded tls to avoid OS-level requirement (#43)
+- Copy on Docker image
+- *(tunnel)* Fixed tunnel running using explicit parameters (#55)
 
 ### 🔧 Continuous Integration
 
@@ -52,6 +33,14 @@ All notable changes to this project will be documented in this file.
 - Update rustls to v0.23 (#33)
 - Remove redundant rustls dep (#34)
 - Release dmtrctl version 1.2.0
+- Release dmtrctl version 1.3.0
+- Release dmtrctl version 1.4.0
+- Release dmtrctl version 1.4.1
+- Increased page size and added port enumerate (#52)
+- Updated cargo toml version
+- Updated to use rustls
+- Updated reqwest dependence
+- Support JSON output
 
 ## [1.1.0] - 2024-04-22
 
