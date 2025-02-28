@@ -4,12 +4,6 @@ All notable changes to this project will be documented in this file.
 
 ## [2.1.0] - 2025-02-28
 
-### 🔧 Continuous Integration
-
-- Change macos runner to latest
-
-## [2.1.0] - 2025-02-27
-
 ### 🚀 Features
 
 - Streamline init flow (#35)
@@ -31,6 +25,8 @@ All notable changes to this project will be documented in this file.
 ### 🔧 Continuous Integration
 
 - Migrate to cargo-dist for releases (#30)
+- Change macos runner to latest
+- Change CI runners
 
 ### ⚙️ Miscellaneous Tasks
 
@@ -47,6 +43,7 @@ All notable changes to this project will be documented in this file.
 - Updated to use rustls
 - Updated reqwest dependence
 - Support JSON output
+- Release dmtrctl version 2.1.0
 - Release dmtrctl version 2.1.0
 
 ## [1.1.0] - 2024-04-22
